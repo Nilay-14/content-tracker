@@ -283,7 +283,7 @@ Ganesh Chaturthi, Navratri, Dussehra, Karva Chauth, Dhanteras, Diwali, Bhai Dooj
 - [x] 2 Database
 - [x] 3 Setup page (brands, targets, festivals)
 - [x] 4 Today page
-- [ ] 5 Deploy to Vercel + install on phone
+- [x] 5 Deploy to Vercel + install on phone
 - [x] 6 Calendar
 - [x] 7 Master dashboard
 - [ ] 8 Missed, reschedule, upcoming
