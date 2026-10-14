@@ -50,6 +50,7 @@ export function PostRow({
           )}
           {showDate && <span>{CONTENT_TYPE_LABEL[post.content_type]}</span>}
           {festival && <span>🎉 {festival.name}</span>}
+          {post.rescheduled_from && <span>↪ for {formatShortDate(post.rescheduled_from)}</span>}
           {post.people.length > 0 && <span className="truncate">👤 {post.people.join(", ")}</span>}
           {post.status === "skipped" && post.skip_reason && (
             <span className="truncate italic">{post.skip_reason}</span>

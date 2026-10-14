@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Search, Sparkles } from "lucide-react";
+import { CalendarClock, Search, Sparkles } from "lucide-react";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { PaceBadge, ProgressBar } from "@/components/badges";
 import { MonthSwitcher } from "@/components/month-switcher";
@@ -12,9 +12,10 @@ import { PostRow } from "@/components/post-row";
 import { useSheet } from "@/components/use-sheet";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { buttonVariants } from "@/components/ui/button";
-import { formatShortDate, type ISODate } from "@/lib/ist";
-import { formatPct, monthEndISO, monthParam, type MonthNumbers } from "@/lib/stats";
+import { Label } from "@/components/ui/label";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { addDaysISO, formatDisplayDate, formatShortDate, type ISODate } from "@/lib/ist";
+import { formatPct, hasPreferredDays, monthEndISO, monthParam, type MonthNumbers } from "@/lib/stats";
 import {
   CONTENT_TYPE_LABEL,
   CONTENT_TYPE_PLURAL,
@@ -29,6 +30,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type Row = { brandId: string; numbers: MonthNumbers };
+type Missed = { brandId: string; days: ISODate[] };
 
 export function MasterView({
   month,
@@ -38,6 +40,8 @@ export function MasterView({
   posts,
   rows,
   total,
+  missed,
+  upcoming,
 }: {
   month: ISODate;
   today: ISODate;
@@ -46,12 +50,18 @@ export function MasterView({
   posts: Post[];
   rows: Row[];
   total: MonthNumbers;
+  /** Missed days this month, for active brands with preferred days. */
+  missed: Missed[];
+  /** Planned and in-progress entries from today to 6 days ahead. */
+  upcoming: Post[];
 }) {
   const festivalSheet = useSheet<string | "all">();
   const festivalListFor = festivalSheet.value;
   const setFestivalListFor = festivalSheet.show;
   const editSheet = useSheet<Post>();
   const editing = editSheet.value;
+  const rescheduleSheet = useSheet<{ brandId: string; date: ISODate }>();
+  const rescheduling = rescheduleSheet.value;
   const brandById = new Map(brands.map((b) => [b.id, b]));
   const festivalById = new Map(festivals.map((f) => [f.id, f]));
   const active = brands.filter((b) => b.is_active);
@@ -177,6 +187,23 @@ export function MasterView({
         </table>
       </div>
 
+      {active.some(hasPreferredDays) && (
+        <MissedList
+          missed={missed}
+          brandById={brandById}
+          calendarHref={calendarHref}
+          onReschedule={(brandId, date) => rescheduleSheet.show({ brandId, date })}
+        />
+      )}
+
+      <UpcomingList
+        today={today}
+        upcoming={upcoming}
+        brandById={brandById}
+        festivalById={festivalById}
+        onEdit={editSheet.show}
+      />
+
       <FestivalGrid month={month} brands={active} festivals={festivals} posts={posts} />
 
       <CombinedLog
@@ -217,6 +244,20 @@ export function MasterView({
         )}
       </BottomSheet>
 
+      <BottomSheet open={rescheduleSheet.open} onOpenChange={rescheduleSheet.onOpenChange} title="Reschedule">
+        {rescheduling && (
+          <RescheduleForm
+            key={rescheduleSheet.key}
+            brand={brandById.get(rescheduling.brandId)!}
+            missedDate={rescheduling.date}
+            brands={brands}
+            festivals={festivals}
+            today={today}
+            onSaved={rescheduleSheet.close}
+          />
+        )}
+      </BottomSheet>
+
       <BottomSheet open={editSheet.open} onOpenChange={editSheet.onOpenChange} title="Edit entry">
         {editing && (
           <PostForm
@@ -233,6 +274,180 @@ export function MasterView({
         )}
       </BottomSheet>
     </div>
+  );
+}
+
+const MISSED_PREVIEW = 5;
+
+function MissedList({
+  missed,
+  brandById,
+  calendarHref,
+  onReschedule,
+}: {
+  missed: Missed[];
+  brandById: Map<string, Brand>;
+  calendarHref: (brandId: string) => string;
+  onReschedule: (brandId: string, date: ISODate) => void;
+}) {
+  const [expanded, setExpanded] = useState<string[]>([]);
+
+  return (
+    <section className="space-y-2">
+      <h2 className="text-lg font-semibold">Missed this month</h2>
+      {missed.length === 0 ? (
+        <p className="rounded-xl border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
+          No missed days. 🎉
+        </p>
+      ) : (
+        missed.map(({ brandId, days }) => {
+          const b = brandById.get(brandId)!;
+          const open = expanded.includes(brandId);
+          // Newest first: the most recent misses are the easiest to catch up on.
+          const sorted = [...days].reverse();
+          const shown = open ? sorted : sorted.slice(0, MISSED_PREVIEW);
+          return (
+            <div key={brandId} className="overflow-hidden rounded-2xl border bg-card">
+              <div className="flex items-center justify-between gap-2 border-b bg-muted/40 px-3 py-2">
+                <Link href={calendarHref(brandId)} className="font-semibold hover:underline" style={{ color: b.color }}>
+                  {b.name} →
+                </Link>
+                <span className="text-sm text-red-600 tabular-nums dark:text-red-400">{days.length} missed</span>
+              </div>
+              <ul className="divide-y">
+                {shown.map((d) => (
+                  <li key={d} className="flex items-center justify-between gap-2 py-1 pr-1 pl-3 text-sm">
+                    <span className="inline-flex items-center gap-2 tabular-nums">
+                      <span className="size-2 rounded-full bg-red-500" />
+                      {formatDisplayDate(d)}
+                    </span>
+                    <Button variant="outline" onClick={() => onReschedule(brandId, d)}>
+                      <CalendarClock /> Reschedule
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+              {days.length > MISSED_PREVIEW && (
+                <Button
+                  variant="ghost"
+                  className="w-full rounded-none border-t"
+                  onClick={() =>
+                    setExpanded((e) => (open ? e.filter((id) => id !== brandId) : [...e, brandId]))
+                  }
+                >
+                  {open ? "Show fewer" : `Show all ${days.length}`}
+                </Button>
+              )}
+            </div>
+          );
+        })
+      )}
+    </section>
+  );
+}
+
+/** A new `planned` entry on a new date that stands in for a missed day. */
+function RescheduleForm({
+  brand,
+  missedDate,
+  brands,
+  festivals,
+  today,
+  onSaved,
+}: {
+  brand: Brand;
+  missedDate: ISODate;
+  brands: Brand[];
+  festivals: Festival[];
+  today: ISODate;
+  onSaved: () => void;
+}) {
+  const [date, setDate] = useState<ISODate>(today);
+
+  return (
+    <div className="space-y-5">
+      <p className="text-sm text-muted-foreground">
+        Plan a <span className="font-medium text-foreground">{brand.name}</span> post to make up for{" "}
+        <span className="font-medium text-foreground">{formatDisplayDate(missedDate)}</span>. That day will then show
+        as rescheduled instead of missed.
+      </p>
+      <div className="space-y-1.5">
+        <Label htmlFor="reschedule-date">New date</Label>
+        <Input
+          id="reschedule-date"
+          type="date"
+          value={date}
+          min={addDaysISO(missedDate, 1)}
+          onChange={(e) => setDate(e.target.value)}
+        />
+      </div>
+      <PostForm
+        post={null}
+        defaults={{ brand_id: brand.id, post_date: date || null, status: "planned", rescheduled_from: missedDate }}
+        brands={brands}
+        festivals={festivals}
+        today={today}
+        onSaved={onSaved}
+      />
+    </div>
+  );
+}
+
+function UpcomingList({
+  today,
+  upcoming,
+  brandById,
+  festivalById,
+  onEdit,
+}: {
+  today: ISODate;
+  upcoming: Post[];
+  brandById: Map<string, Brand>;
+  festivalById: Map<string, Festival>;
+  onEdit: (post: Post) => void;
+}) {
+  const days = Array.from({ length: 7 }, (_, i) => addDaysISO(today, i));
+  const byDay = days
+    .map((d) => ({ date: d, posts: upcoming.filter((p) => p.post_date === d) }))
+    .filter((g) => g.posts.length > 0);
+  const dayLabel = (d: ISODate) =>
+    d === today ? `Today · ${formatDisplayDate(d)}` : d === days[1] ? `Tomorrow · ${formatDisplayDate(d)}` : formatDisplayDate(d);
+
+  return (
+    <section className="space-y-2">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-semibold">Upcoming 7 days</h2>
+        <span className="text-sm text-muted-foreground">
+          {formatShortDate(days[0])} – {formatShortDate(days[6])}
+        </span>
+      </div>
+      {byDay.length === 0 ? (
+        <p className="rounded-xl border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
+          Nothing planned for the next 7 days.
+        </p>
+      ) : (
+        <div className="overflow-hidden rounded-xl border bg-card">
+          {byDay.map((g) => (
+            <div key={g.date} className="border-b last:border-b-0">
+              <div className="border-b bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                {dayLabel(g.date)}
+              </div>
+              <div className="divide-y">
+                {g.posts.map((p) => (
+                  <PostRow
+                    key={p.id}
+                    post={p}
+                    brand={brandById.get(p.brand_id)}
+                    festival={p.festival_id ? festivalById.get(p.festival_id) : undefined}
+                    onClick={() => onEdit(p)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

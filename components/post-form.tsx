@@ -70,7 +70,7 @@ type FormState = {
 
 function initialState(
   post: Post | null,
-  defaults: { brand_id: string; post_date: ISODate | null },
+  defaults: { brand_id: string; post_date: ISODate | null; status?: PostStatus },
   today: ISODate,
 ): FormState {
   return {
@@ -78,7 +78,7 @@ function initialState(
     post_date: post ? (post.post_date ?? "") : (defaults.post_date ?? ""),
     title: post?.title ?? "",
     content_type: post?.content_type ?? "reel",
-    status: post?.status ?? defaultStatus(defaults.post_date, today),
+    status: post?.status ?? defaults.status ?? defaultStatus(defaults.post_date, today),
     skip_reason: post?.skip_reason ?? "",
     festivalOn: Boolean(post?.festival_id),
     festival_id: post?.festival_id ?? "",
@@ -103,7 +103,13 @@ export function PostForm({
   onDeleted,
 }: {
   post: Post | null;
-  defaults: { brand_id: string; post_date: ISODate | null; rescheduled_from?: ISODate | null };
+  defaults: {
+    brand_id: string;
+    post_date: ISODate | null;
+    /** Starting status for a new entry; otherwise worked out from the date. */
+    status?: PostStatus;
+    rescheduled_from?: ISODate | null;
+  };
   brands: Brand[];
   festivals: Festival[];
   today: ISODate;

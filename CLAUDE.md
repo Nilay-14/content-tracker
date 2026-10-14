@@ -286,7 +286,7 @@ Ganesh Chaturthi, Navratri, Dussehra, Karva Chauth, Dhanteras, Diwali, Bhai Dooj
 - [x] 5 Deploy to Vercel + install on phone
 - [x] 6 Calendar
 - [x] 7 Master dashboard
-- [ ] 8 Missed, reschedule, upcoming
+- [x] 8 Missed, reschedule, upcoming
 - [ ] 9 Repeat warning + autocomplete
 - [ ] 10 Performance results
 - [ ] 11 Monthly report export
