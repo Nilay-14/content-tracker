@@ -1,0 +1,448 @@
+"use client";
+
+import { useState } from "react";
+import { differenceInCalendarDays } from "date-fns";
+import { Link2, Plus, Trash2, X } from "lucide-react";
+import { saveFestival } from "@/app/actions/festivals";
+import { deletePost, savePost } from "@/app/actions/posts";
+import { ChoiceChips } from "@/components/choice-chips";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { NativeSelect } from "@/components/native-select";
+import { toast } from "@/components/toaster";
+import { useRunAction } from "@/components/use-run-action";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { formatShortDate, fromISODate, type ISODate } from "@/lib/ist";
+import {
+  CONTENT_TYPE_LABEL,
+  CONTENT_TYPES,
+  POST_STATUS_LABEL,
+  POST_STATUSES,
+  type Brand,
+  type ContentType,
+  type Festival,
+  type Post,
+  type PostInput,
+  type PostStatus,
+} from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+const TYPE_OPTIONS = CONTENT_TYPES.map((t) => ({ value: t, label: CONTENT_TYPE_LABEL[t] }));
+const STATUS_OPTIONS = POST_STATUSES.map((s) => ({ value: s, label: POST_STATUS_LABEL[s] }));
+
+export function defaultStatus(date: ISODate | null, today: ISODate): PostStatus {
+  if (!date) return "idea";
+  return date <= today ? "posted" : "planned";
+}
+
+/** Festivals with the nearest upcoming dates first, then the rest in their usual order. */
+export function sortFestivalsForPicker(festivals: Festival[], around: ISODate): Festival[] {
+  const upcoming = festivals
+    .filter((f) => f.festival_date && f.festival_date >= around)
+    .sort((a, b) => a.festival_date!.localeCompare(b.festival_date!));
+  const rest = festivals.filter((f) => !upcoming.includes(f));
+  return [...upcoming, ...rest];
+}
+
+function festivalOptionLabel(f: Festival, around: ISODate) {
+  if (!f.festival_date) return f.name;
+  const days = differenceInCalendarDays(fromISODate(f.festival_date), fromISODate(around));
+  const when =
+    days === 0 ? "today" : days > 0 && days <= 60 ? `in ${days} day${days === 1 ? "" : "s"}` : null;
+  return `${f.name} · ${formatShortDate(f.festival_date)}${when ? ` (${when})` : ""}`;
+}
+
+type FormState = {
+  brand_id: string;
+  post_date: string;
+  title: string;
+  content_type: ContentType;
+  status: PostStatus;
+  skip_reason: string;
+  festivalOn: boolean;
+  festival_id: string;
+  post_url: string;
+  people: string[];
+  notes: string;
+};
+
+function initialState(
+  post: Post | null,
+  defaults: { brand_id: string; post_date: ISODate | null },
+  today: ISODate,
+): FormState {
+  return {
+    brand_id: post?.brand_id ?? defaults.brand_id,
+    post_date: post ? (post.post_date ?? "") : (defaults.post_date ?? ""),
+    title: post?.title ?? "",
+    content_type: post?.content_type ?? "reel",
+    status: post?.status ?? defaultStatus(defaults.post_date, today),
+    skip_reason: post?.skip_reason ?? "",
+    festivalOn: Boolean(post?.festival_id),
+    festival_id: post?.festival_id ?? "",
+    post_url: post?.post_url ?? "",
+    people: post?.people ?? [],
+    notes: post?.notes ?? "",
+  };
+}
+
+/**
+ * The entry form. With `post` it edits that entry (and can delete it);
+ * without, it creates a new one for `defaults.brand_id` on `defaults.post_date`.
+ */
+export function PostForm({
+  post,
+  defaults,
+  brands,
+  festivals,
+  today,
+  showBrandAndDate = false,
+  onSaved,
+  onDeleted,
+}: {
+  post: Post | null;
+  defaults: { brand_id: string; post_date: ISODate | null; rescheduled_from?: ISODate | null };
+  brands: Brand[];
+  festivals: Festival[];
+  today: ISODate;
+  showBrandAndDate?: boolean;
+  onSaved?: (post: Post) => void;
+  onDeleted?: () => void;
+}) {
+  const [form, setForm] = useState<FormState>(() => initialState(post, defaults, today));
+  const [peopleDraft, setPeopleDraft] = useState("");
+  const [addingFestival, setAddingFestival] = useState(false);
+  const [newFestival, setNewFestival] = useState({ name: "", date: "" });
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const { pending, run } = useRunAction();
+
+  // When brand and date aren't shown, they come from the page (brand chips, date bar).
+  const brandId = showBrandAndDate ? form.brand_id : defaults.brand_id;
+  const postDate = showBrandAndDate ? form.post_date : (defaults.post_date ?? "");
+  const around = postDate || today;
+  const activeFestivals = festivals.filter((f) => f.is_active || f.id === form.festival_id);
+  const pickerFestivals = sortFestivalsForPicker(activeFestivals, around);
+
+  function set<K extends keyof FormState>(key: K, value: FormState[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function addPerson(raw: string) {
+    const names = raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (names.length === 0) return;
+    setForm((f) => ({
+      ...f,
+      people: [...f.people, ...names.filter((n) => !f.people.includes(n))],
+    }));
+    setPeopleDraft("");
+  }
+
+  function toggleFestival(on: boolean) {
+    setForm((f) => ({
+      ...f,
+      festivalOn: on,
+      festival_id: on ? f.festival_id || pickerFestivals[0]?.id || "" : f.festival_id,
+    }));
+  }
+
+  function submit() {
+    // Pick up a name typed but not yet turned into a chip.
+    const people = peopleDraft.trim()
+      ? [...form.people, ...peopleDraft.split(",").map((s) => s.trim()).filter(Boolean)]
+      : form.people;
+    const input: PostInput = {
+      brand_id: brandId,
+      post_date: postDate || null,
+      title: form.title,
+      content_type: form.content_type,
+      status: form.status,
+      skip_reason: form.status === "skipped" ? form.skip_reason : null,
+      festival_id: form.festivalOn && form.festival_id ? form.festival_id : null,
+      post_url: form.post_url,
+      people,
+      notes: form.notes,
+      // Not edited here, but kept so an edit never loses the link to a missed day.
+      rescheduled_from: post ? post.rescheduled_from : (defaults.rescheduled_from ?? null),
+    };
+    run(() => savePost(post?.id ?? null, input), {
+      success: post ? "Entry updated" : "Saved",
+      onSuccess: (saved) => {
+        if (!post) {
+          // Clear the form but keep the date and brand.
+          setForm(initialState(null, { brand_id: brandId, post_date: postDate || null }, today));
+          setPeopleDraft("");
+        }
+        onSaved?.(saved);
+      },
+    });
+  }
+
+  function createFestival() {
+    run(() => saveFestival(null, newFestival.name, newFestival.date || null), {
+      success: "Festival added",
+      onSuccess: (festival) => {
+        if (festival) setForm((f) => ({ ...f, festivalOn: true, festival_id: festival.id }));
+        setAddingFestival(false);
+        setNewFestival({ name: "", date: "" });
+      },
+    });
+  }
+
+  const idPrefix = post?.id ?? "new";
+
+  return (
+    <form
+      className="space-y-5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!form.title.trim()) {
+          toast("Add the content or product first", "error");
+          return;
+        }
+        submit();
+      }}
+    >
+      {showBrandAndDate && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor={`${idPrefix}-brand`}>Brand</Label>
+            <NativeSelect
+              id={`${idPrefix}-brand`}
+              value={form.brand_id}
+              onChange={(e) => set("brand_id", e.target.value)}
+            >
+              {brands.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`${idPrefix}-date`}>Date</Label>
+            <Input
+              id={`${idPrefix}-date`}
+              type="date"
+              value={form.post_date}
+              required={form.status !== "idea"}
+              onChange={(e) => set("post_date", e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-title`}>Content / product</Label>
+        <Input
+          id={`${idPrefix}-title`}
+          value={form.title}
+          onChange={(e) => set("title", e.target.value)}
+          placeholder="e.g. Dumpling squishy"
+          autoComplete="off"
+          enterKeyHint="done"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Type</Label>
+        <ChoiceChips
+          label="Type"
+          options={TYPE_OPTIONS}
+          value={form.content_type}
+          onChange={(v) => set("content_type", v)}
+        />
+      </div>
+
+      <div className="space-y-3 rounded-xl border bg-muted/30 p-3">
+        <label className="flex min-h-8 items-center justify-between gap-3">
+          <span className="text-sm font-medium">🎉 Festival post</span>
+          <Switch checked={form.festivalOn} onCheckedChange={toggleFestival} />
+        </label>
+        {form.festivalOn && (
+          <div className="space-y-2">
+            {pickerFestivals.length > 0 && (
+              <NativeSelect
+                aria-label="Festival"
+                value={form.festival_id}
+                onChange={(e) => set("festival_id", e.target.value)}
+              >
+                <option value="" disabled>
+                  Pick a festival
+                </option>
+                {pickerFestivals.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {festivalOptionLabel(f, around)}
+                  </option>
+                ))}
+              </NativeSelect>
+            )}
+            {addingFestival ? (
+              <div className="space-y-2 rounded-lg border bg-background p-2">
+                <Input
+                  aria-label="New festival name"
+                  placeholder="Festival name"
+                  value={newFestival.name}
+                  onChange={(e) => setNewFestival((n) => ({ ...n, name: e.target.value }))}
+                />
+                <Input
+                  aria-label="Festival date (optional)"
+                  type="date"
+                  value={newFestival.date}
+                  onChange={(e) => setNewFestival((n) => ({ ...n, date: e.target.value }))}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    className="flex-1"
+                    disabled={pending || !newFestival.name.trim()}
+                    onClick={createFestival}
+                  >
+                    Add
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={() => setAddingFestival(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setAddingFestival(true)}
+              >
+                <Plus /> Add festival
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Status</Label>
+        <ChoiceChips
+          label="Status"
+          options={STATUS_OPTIONS}
+          value={form.status}
+          onChange={(v) => set("status", v)}
+        />
+      </div>
+
+      {form.status === "skipped" && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idPrefix}-reason`}>Reason</Label>
+          <Input
+            id={`${idPrefix}-reason`}
+            value={form.skip_reason}
+            onChange={(e) => set("skip_reason", e.target.value)}
+            placeholder="e.g. Shoot postponed"
+          />
+        </div>
+      )}
+
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-url`}>Post link (optional)</Label>
+        <div className="relative">
+          <Link2 className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id={`${idPrefix}-url`}
+            type="url"
+            inputMode="url"
+            className="pl-9"
+            value={form.post_url}
+            onChange={(e) => set("post_url", e.target.value)}
+            placeholder="https://instagram.com/p/…"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-people`}>People featured</Label>
+        {form.people.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {form.people.map((p) => (
+              <span
+                key={p}
+                className="inline-flex h-8 items-center gap-1 rounded-full bg-secondary pr-1 pl-3 text-sm"
+              >
+                {p}
+                <button
+                  type="button"
+                  aria-label={`Remove ${p}`}
+                  className="flex size-6 items-center justify-center rounded-full hover:bg-muted"
+                  onClick={() => set("people", form.people.filter((x) => x !== p))}
+                >
+                  <X className="size-3.5" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <Input
+          id={`${idPrefix}-people`}
+          value={peopleDraft}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v.endsWith(",")) addPerson(v);
+            else setPeopleDraft(v);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addPerson(peopleDraft);
+            }
+          }}
+          onBlur={() => addPerson(peopleDraft)}
+          placeholder="Type a name, then Enter"
+          autoComplete="off"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor={`${idPrefix}-notes`}>Notes</Label>
+        <Textarea
+          id={`${idPrefix}-notes`}
+          value={form.notes}
+          onChange={(e) => set("notes", e.target.value)}
+          rows={2}
+        />
+      </div>
+
+      <div className={cn("flex gap-2", post ? "flex-row" : "flex-col")}>
+        <Button type="submit" size="lg" className="flex-1" disabled={pending}>
+          {pending ? "Saving…" : post ? "Save changes" : "Save entry"}
+        </Button>
+        {post && (
+          <Button
+            type="button"
+            variant="destructive"
+            size="lg"
+            aria-label="Delete entry"
+            disabled={pending}
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Trash2 />
+          </Button>
+        )}
+      </div>
+
+      {post && (
+        <ConfirmDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title="Delete this entry?"
+          description={`“${post.title}” will be removed. This can't be undone.`}
+          onConfirm={() =>
+            run(() => deletePost(post.id), { success: "Entry deleted", onSuccess: onDeleted })
+          }
+        />
+      )}
+    </form>
+  );
+}

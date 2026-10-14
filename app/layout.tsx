@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
+import { Toaster } from "@/components/toaster";
 import { APP_NAME, APP_SHORT_NAME, THEME_COLOR } from "@/lib/theme";
 import "./globals.css";
 
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
         <BottomTabBar />
+        <Toaster />
       </body>
     </html>
   );
