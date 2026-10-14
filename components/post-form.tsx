@@ -28,7 +28,6 @@ import {
   type PostInput,
   type PostStatus,
 } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 const TYPE_OPTIONS = CONTENT_TYPES.map((t) => ({ value: t, label: CONTENT_TYPE_LABEL[t] }));
 const STATUS_OPTIONS = POST_STATUSES.map((s) => ({ value: s, label: POST_STATUS_LABEL[s] }));
@@ -414,7 +413,7 @@ export function PostForm({
         />
       </div>
 
-      <div className={cn("flex gap-2", post ? "flex-row" : "flex-col")}>
+      <div className="flex gap-2">
         <Button type="submit" size="lg" className="flex-1" disabled={pending}>
           {pending ? "Saving…" : post ? "Save changes" : "Save entry"}
         </Button>

@@ -280,12 +280,12 @@ Ganesh Chaturthi, Navratri, Dussehra, Karva Chauth, Dhanteras, Diwali, Bhai Dooj
 ## Progress
 
 - [x] 1 Project setup
-- [ ] 2 Database
-- [ ] 3 Setup page (brands, targets, festivals)
-- [ ] 4 Today page
+- [x] 2 Database
+- [x] 3 Setup page (brands, targets, festivals)
+- [x] 4 Today page
 - [ ] 5 Deploy to Vercel + install on phone
-- [ ] 6 Calendar
-- [ ] 7 Master dashboard
+- [x] 6 Calendar
+- [x] 7 Master dashboard
 - [ ] 8 Missed, reschedule, upcoming
 - [ ] 9 Repeat warning + autocomplete
 - [ ] 10 Performance results

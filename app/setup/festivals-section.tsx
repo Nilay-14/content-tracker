@@ -11,6 +11,7 @@ import {
 } from "@/app/actions/festivals";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { useRunAction } from "@/components/use-run-action";
+import { useSheet } from "@/components/use-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,7 +28,9 @@ function relative(date: ISODate, today: ISODate) {
 }
 
 export function FestivalsSection({ festivals, today }: { festivals: Festival[]; today: ISODate }) {
-  const [editing, setEditing] = useState<Festival | "new" | null>(null);
+  const sheet = useSheet<Festival | "new">();
+  const editing = sheet.value;
+  const setEditing = sheet.show;
   const [showArchived, setShowArchived] = useState(false);
   const { pending, run } = useRunAction();
   const active = festivals.filter((f) => f.is_active);
@@ -127,15 +130,15 @@ export function FestivalsSection({ festivals, today }: { festivals: Festival[]; 
       )}
 
       <BottomSheet
-        open={editing !== null}
-        onOpenChange={(open) => !open && setEditing(null)}
+        open={sheet.open}
+        onOpenChange={sheet.onOpenChange}
         title={editing === "new" ? "Add festival" : "Edit festival"}
       >
         {editing !== null && (
           <FestivalEditor
-            key={editing === "new" ? "new" : editing.id}
+            key={sheet.key}
             festival={editing === "new" ? null : editing}
-            onDone={() => setEditing(null)}
+            onDone={sheet.close}
           />
         )}
       </BottomSheet>

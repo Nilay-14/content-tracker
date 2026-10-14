@@ -16,6 +16,7 @@ import {
 import { BottomSheet } from "@/components/bottom-sheet";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { useRunAction } from "@/components/use-run-action";
+import { useSheet } from "@/components/use-sheet";
 import { describeDays, WeekdayPicker } from "@/components/weekday-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +42,9 @@ export function BrandsSection({
   targets: BrandMonthTarget[];
   today: ISODate;
 }) {
-  const [editing, setEditing] = useState<Brand | "new" | null>(null);
+  const sheet = useSheet<Brand | "new">();
+  const editing = sheet.value;
+  const setEditing = sheet.show;
   const { pending, run } = useRunAction();
   const active = brands.filter((b) => b.is_active);
   const archived = brands.filter((b) => !b.is_active);
@@ -146,18 +149,18 @@ export function BrandsSection({
       )}
 
       <BottomSheet
-        open={editing !== null}
-        onOpenChange={(open) => !open && setEditing(null)}
+        open={sheet.open}
+        onOpenChange={sheet.onOpenChange}
         title={editing === "new" ? "Add brand" : "Edit brand"}
       >
         {editing !== null && (
           <BrandEditor
-            key={editing === "new" ? "new" : editing.id}
+            key={sheet.key}
             brand={editing === "new" ? null : editing}
             postCount={editing === "new" ? 0 : (postCounts[editing.id] ?? 0)}
             targets={editing === "new" ? [] : targets.filter((t) => t.brand_id === editing.id)}
             today={today}
-            onDone={() => setEditing(null)}
+            onDone={sheet.close}
           />
         )}
       </BottomSheet>

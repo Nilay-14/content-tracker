@@ -10,6 +10,7 @@ import { PaceBadge, ProgressBar } from "@/components/badges";
 import { PostForm } from "@/components/post-form";
 import { PostRow } from "@/components/post-row";
 import { useRememberedBrand } from "@/components/use-remembered-brand";
+import { useSheet } from "@/components/use-sheet";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { addDaysISO, formatDisplayDate, fromISODate, type ISODate } from "@/lib/ist";
 import { formatPct, type MonthNumbers } from "@/lib/stats";
@@ -48,7 +49,7 @@ export function TodayView({
 }) {
   const [remembered, remember] = useRememberedBrand();
   const [picked, setPicked] = useState<string | null>(null);
-  const [editing, setEditing] = useState<Post | null>(null);
+  const editSheet = useSheet<Post>();
   const topRef = useRef<HTMLDivElement>(null);
 
   const valid = (id: string | null) => (id && brands.some((b) => b.id === id) ? id : null);
@@ -184,7 +185,7 @@ export function TodayView({
                   key={p.id}
                   post={p}
                   festival={p.festival_id ? festivalById.get(p.festival_id) : undefined}
-                  onClick={() => setEditing(p)}
+                  onClick={() => editSheet.show(p)}
                 />
               ))}
             </div>
@@ -245,22 +246,18 @@ export function TodayView({
         </ul>
       </section>
 
-      <BottomSheet
-        open={editing !== null}
-        onOpenChange={(open) => !open && setEditing(null)}
-        title="Edit entry"
-      >
-        {editing && (
+      <BottomSheet open={editSheet.open} onOpenChange={editSheet.onOpenChange} title="Edit entry">
+        {editSheet.value && (
           <PostForm
-            key={editing.id}
-            post={editing}
-            defaults={{ brand_id: editing.brand_id, post_date: editing.post_date }}
+            key={editSheet.key}
+            post={editSheet.value}
+            defaults={{ brand_id: editSheet.value.brand_id, post_date: editSheet.value.post_date }}
             brands={brands}
             festivals={festivals}
             today={today}
             showBrandAndDate
-            onSaved={() => setEditing(null)}
-            onDeleted={() => setEditing(null)}
+            onSaved={editSheet.close}
+            onDeleted={editSheet.close}
           />
         )}
       </BottomSheet>
@@ -296,7 +293,7 @@ function DateBar({ date, today }: { date: ISODate; today: ISODate }) {
           }}
           className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border bg-card px-2 font-semibold"
         >
-          <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
+          <CalendarDays className="hidden size-4 shrink-0 text-muted-foreground min-[400px]:block" />
           <span className="truncate">{formatDisplayDate(date)}</span>
         </button>
         <input
@@ -317,7 +314,7 @@ function DateBar({ date, today }: { date: ISODate; today: ISODate }) {
         <ChevronRight />
       </Link>
       {date !== today && (
-        <Button variant="secondary" onClick={() => router.push("/")}>
+        <Button variant="secondary" className="px-3" onClick={() => router.push("/")}>
           Today
         </Button>
       )}

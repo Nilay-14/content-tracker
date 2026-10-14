@@ -9,6 +9,7 @@ import { MonthSwitcher } from "@/components/month-switcher";
 import { NativeSelect } from "@/components/native-select";
 import { PostForm } from "@/components/post-form";
 import { PostRow } from "@/components/post-row";
+import { useSheet } from "@/components/use-sheet";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { buttonVariants } from "@/components/ui/button";
@@ -46,8 +47,11 @@ export function MasterView({
   rows: Row[];
   total: MonthNumbers;
 }) {
-  const [festivalListFor, setFestivalListFor] = useState<string | "all" | null>(null);
-  const [editing, setEditing] = useState<Post | null>(null);
+  const festivalSheet = useSheet<string | "all">();
+  const festivalListFor = festivalSheet.value;
+  const setFestivalListFor = festivalSheet.show;
+  const editSheet = useSheet<Post>();
+  const editing = editSheet.value;
   const brandById = new Map(brands.map((b) => [b.id, b]));
   const festivalById = new Map(festivals.map((f) => [f.id, f]));
   const active = brands.filter((b) => b.is_active);
@@ -181,12 +185,12 @@ export function MasterView({
         posts={posts}
         brandById={brandById}
         festivalById={festivalById}
-        onEdit={setEditing}
+        onEdit={editSheet.show}
       />
 
       <BottomSheet
-        open={festivalListFor !== null}
-        onOpenChange={(open) => !open && setFestivalListFor(null)}
+        open={festivalSheet.open}
+        onOpenChange={festivalSheet.onOpenChange}
         title={`🎉 Festival posts · ${
           festivalListFor === "all" ? "All brands" : (brandById.get(festivalListFor ?? "")?.name ?? "")
         }`}
@@ -213,18 +217,18 @@ export function MasterView({
         )}
       </BottomSheet>
 
-      <BottomSheet open={editing !== null} onOpenChange={(open) => !open && setEditing(null)} title="Edit entry">
+      <BottomSheet open={editSheet.open} onOpenChange={editSheet.onOpenChange} title="Edit entry">
         {editing && (
           <PostForm
-            key={editing.id}
+            key={editSheet.key}
             post={editing}
             defaults={{ brand_id: editing.brand_id, post_date: editing.post_date }}
             brands={brands.filter((b) => b.is_active || b.id === editing.brand_id)}
             festivals={festivals}
             today={today}
             showBrandAndDate
-            onSaved={() => setEditing(null)}
-            onDeleted={() => setEditing(null)}
+            onSaved={editSheet.close}
+            onDeleted={editSheet.close}
           />
         )}
       </BottomSheet>

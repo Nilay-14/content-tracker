@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, LayoutGrid, List, Plus, Sparkles } from "lucide-react";
@@ -11,6 +11,7 @@ import { PostForm } from "@/components/post-form";
 import { PostRow } from "@/components/post-row";
 import { StatStrip } from "@/components/stat-strip";
 import { useRememberedBrand } from "@/components/use-remembered-brand";
+import { useSheet } from "@/components/use-sheet";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { formatDisplayDate, fromISODate, type ISODate } from "@/lib/ist";
 import {
@@ -96,7 +97,10 @@ function BrandCalendar({
 }: Extract<Props, { brand: Brand }>) {
   const router = useRouter();
   const [remembered, remember] = useRememberedBrand();
-  const [sheet, setSheet] = useState<SheetState | null>(null);
+  const sheetControl = useSheet<SheetState>();
+  const sheet = sheetControl.value;
+  const setSheet = (next: SheetState | null) =>
+    next ? sheetControl.show(next) : sheetControl.close();
   const festivalById = new Map(festivals.map((f) => [f.id, f]));
   const href = (brandId: string, v: "grid" | "list" = view) =>
     `/calendar?${new URLSearchParams({ brand: brandId, month: monthParam(month), ...(v === "list" ? { view: v } : {}) })}`;
@@ -269,8 +273,8 @@ function BrandCalendar({
       )}
 
       <BottomSheet
-        open={sheet !== null}
-        onOpenChange={(open) => !open && setSheet(null)}
+        open={sheetControl.open}
+        onOpenChange={sheetControl.onOpenChange}
         title={
           sheet === null
             ? ""
