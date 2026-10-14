@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { ConnectNotice } from "@/components/connect-notice";
 import { PageHeader } from "@/components/page-header";
-import { ListSkeleton } from "@/components/skeletons";
+import { BandSkeleton, ListSkeleton } from "@/components/skeletons";
 import { listBrands, listMonthTargets } from "@/lib/db/brands";
 import { isDbConfigured } from "@/lib/db/client";
 import { listFestivals } from "@/lib/db/festivals";
@@ -15,10 +15,15 @@ import { MasterView } from "./master-view";
 export default function MasterPage({ searchParams }: PageProps<"/master">) {
   return (
     <>
-      <PageHeader title="Master">
-        <p className="text-sm text-muted-foreground">Every brand, one month.</p>
-      </PageHeader>
-      <Suspense fallback={<ListSkeleton rows={6} />}>
+      <PageHeader title="Master" subtitle="Every brand, one month." />
+      <Suspense
+        fallback={
+          <div className="space-y-6">
+            <BandSkeleton />
+            <ListSkeleton rows={6} />
+          </div>
+        }
+      >
         <MasterContent searchParams={searchParams} />
       </Suspense>
     </>

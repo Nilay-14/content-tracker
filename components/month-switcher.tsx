@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { ON_BAND } from "@/components/page-header";
 import { fromISODate, monthStartISO, type ISODate } from "@/lib/ist";
 import { monthParam, shiftMonth } from "@/lib/stats";
-import { cn } from "@/lib/utils";
 
 /** ‹ October 2026 › with a "This month" shortcut. Keeps the other query params. */
 export function MonthSwitcher({
@@ -31,22 +30,22 @@ export function MonthSwitcher({
       <Link
         href={href(shiftMonth(month, -1))}
         aria-label="Previous month"
-        className={buttonVariants({ variant: "outline", size: "icon" })}
+        className={ON_BAND.button}
       >
         <ChevronLeft />
       </Link>
-      <div className="flex h-11 min-w-0 flex-1 items-center justify-center rounded-lg border bg-card font-semibold">
+      <div className={`${ON_BAND.box} min-w-0 flex-1`}>
         {format(fromISODate(month), "MMMM yyyy")}
       </div>
       <Link
         href={href(shiftMonth(month, 1))}
         aria-label="Next month"
-        className={buttonVariants({ variant: "outline", size: "icon" })}
+        className={ON_BAND.button}
       >
         <ChevronRight />
       </Link>
       {month !== current && (
-        <Link href={href(current)} className={cn(buttonVariants({ variant: "secondary" }))}>
+        <Link href={href(current)} className={ON_BAND.pill}>
           Now
         </Link>
       )}

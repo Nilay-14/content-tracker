@@ -13,9 +13,7 @@ import { FestivalsSection } from "./festivals-section";
 export default function SetupPage() {
   return (
     <>
-      <PageHeader title="Setup">
-        <p className="text-sm text-muted-foreground">Brands, targets and festivals.</p>
-      </PageHeader>
+      <PageHeader title="Setup" subtitle="Brands, targets and festivals." />
       <Suspense fallback={<ListSkeleton rows={6} />}>
         <SetupContent />
       </Suspense>

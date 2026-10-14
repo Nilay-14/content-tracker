@@ -22,7 +22,7 @@ export function BottomTabBar() {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/80"
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_-12px_rgb(0_0_0/0.15)] backdrop-blur supports-[backdrop-filter]:bg-card/85"
     >
       <ul className="mx-auto grid max-w-3xl grid-cols-4">
         {TABS.map(({ href, label, icon: Icon }) => {
@@ -33,13 +33,20 @@ export function BottomTabBar() {
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium transition-colors",
+                  "group flex h-16 flex-col items-center justify-center gap-0.5 text-xs font-medium transition-colors",
                   active
-                    ? "text-primary"
+                    ? "font-semibold text-primary"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <Icon className="size-6" strokeWidth={active ? 2.25 : 1.75} />
+                <span
+                  className={cn(
+                    "flex h-8 w-14 items-center justify-center rounded-full transition-colors",
+                    active ? "bg-primary/12 dark:bg-primary/20" : "group-hover:bg-muted",
+                  )}
+                >
+                  <Icon className="size-[22px]" strokeWidth={active ? 2.25 : 1.75} />
+                </span>
                 {label}
               </Link>
             </li>

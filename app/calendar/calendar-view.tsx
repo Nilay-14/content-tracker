@@ -7,6 +7,7 @@ import { ArrowLeft, LayoutGrid, List, Plus, Sparkles } from "lucide-react";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { StatusBadge } from "@/components/badges";
 import { MonthSwitcher } from "@/components/month-switcher";
+import { HeaderBand } from "@/components/page-header";
 import { PostForm } from "@/components/post-form";
 import { PostRow } from "@/components/post-row";
 import { StatStrip } from "@/components/stat-strip";
@@ -121,6 +122,15 @@ function BrandCalendar({
 
   return (
     <div className="space-y-4">
+      <HeaderBand>
+        <MonthSwitcher
+          month={month}
+          today={today}
+          basePath="/calendar"
+          query={{ brand: brand.id, view: view === "list" ? "list" : undefined }}
+        />
+      </HeaderBand>
+
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
         {brands.map((b) => {
           const active = b.id === brand.id;
@@ -142,13 +152,6 @@ function BrandCalendar({
           );
         })}
       </div>
-
-      <MonthSwitcher
-        month={month}
-        today={today}
-        basePath="/calendar"
-        query={{ brand: brand.id, view: view === "list" ? "list" : undefined }}
-      />
 
       <StatStrip numbers={numbers} />
 

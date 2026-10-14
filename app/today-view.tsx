@@ -7,11 +7,12 @@ import { differenceInCalendarDays, format } from "date-fns";
 import { CalendarDays, ChevronLeft, ChevronRight, Hourglass, Sparkles } from "lucide-react";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { PaceBadge, ProgressBar } from "@/components/badges";
+import { HeaderBand, ON_BAND } from "@/components/page-header";
 import { PostForm } from "@/components/post-form";
 import { PostRow } from "@/components/post-row";
 import { useRememberedBrand } from "@/components/use-remembered-brand";
 import { useSheet } from "@/components/use-sheet";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { addDaysISO, formatDisplayDate, fromISODate, type ISODate } from "@/lib/ist";
 import { formatPct, type MonthNumbers } from "@/lib/stats";
 import type { Brand, Festival, Post } from "@/lib/types";
@@ -66,7 +67,9 @@ export function TodayView({
   if (brands.length === 0) {
     return (
       <>
-        <DateBar date={date} today={today} />
+        <HeaderBand>
+          <DateBar date={date} today={today} />
+        </HeaderBand>
         <div className="rounded-2xl border border-dashed p-6 text-center">
           <Sparkles className="mx-auto mb-2 size-7 text-muted-foreground" />
           <h2 className="font-semibold">Add your brands first</h2>
@@ -83,8 +86,10 @@ export function TodayView({
 
   return (
     <div className="space-y-5">
-      <div ref={topRef} className="scroll-mt-4" />
-      <DateBar date={date} today={today} />
+      <HeaderBand>
+        <div ref={topRef} className="scroll-mt-4" />
+        <DateBar date={date} today={today} />
+      </HeaderBand>
 
       {banner.length > 0 && (
         <div className="space-y-2">
@@ -275,7 +280,7 @@ function DateBar({ date, today }: { date: ISODate; today: ISODate }) {
       <Link
         href={href(addDaysISO(date, -1))}
         aria-label="Previous day"
-        className={buttonVariants({ variant: "outline", size: "icon" })}
+        className={ON_BAND.button}
       >
         <ChevronLeft />
       </Link>
@@ -291,9 +296,9 @@ function DateBar({ date, today }: { date: ISODate; today: ISODate }) {
               input.focus();
             }
           }}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border bg-card px-2 font-semibold"
+          className={`${ON_BAND.box} w-full gap-2 px-2`}
         >
-          <CalendarDays className="hidden size-4 shrink-0 text-muted-foreground min-[400px]:block" />
+          <CalendarDays className="hidden size-4 shrink-0 opacity-80 min-[400px]:block" />
           <span className="truncate">{formatDisplayDate(date)}</span>
         </button>
         <input
@@ -309,14 +314,14 @@ function DateBar({ date, today }: { date: ISODate; today: ISODate }) {
       <Link
         href={href(addDaysISO(date, 1))}
         aria-label="Next day"
-        className={buttonVariants({ variant: "outline", size: "icon" })}
+        className={ON_BAND.button}
       >
         <ChevronRight />
       </Link>
       {date !== today && (
-        <Button variant="secondary" className="px-3" onClick={() => router.push("/")}>
+        <button type="button" className={ON_BAND.pill} onClick={() => router.push("/")}>
           Today
-        </Button>
+        </button>
       )}
     </div>
   );

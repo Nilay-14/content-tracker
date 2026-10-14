@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { ConnectNotice } from "@/components/connect-notice";
-import { ListSkeleton } from "@/components/skeletons";
+import { PageHeader } from "@/components/page-header";
+import { BandSkeleton, ListSkeleton } from "@/components/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listBrands, listMonthTargets } from "@/lib/db/brands";
 import { isDbConfigured } from "@/lib/db/client";
@@ -16,17 +17,20 @@ const BANNER_DAYS = 10;
 
 export default function TodayPage({ searchParams }: PageProps<"/">) {
   return (
-    <Suspense
-      fallback={
-        <div className="space-y-4">
-          <Skeleton className="h-12 w-full rounded-xl" />
-          <Skeleton className="h-11 w-2/3 rounded-full" />
-          <ListSkeleton rows={4} />
-        </div>
-      }
-    >
-      <TodayContent searchParams={searchParams} />
-    </Suspense>
+    <>
+      <PageHeader title="Today" />
+      <Suspense
+        fallback={
+          <div className="space-y-5">
+            <BandSkeleton />
+            <Skeleton className="h-11 w-2/3 rounded-full" />
+            <ListSkeleton rows={4} />
+          </div>
+        }
+      >
+        <TodayContent searchParams={searchParams} />
+      </Suspense>
+    </>
   );
 }
 

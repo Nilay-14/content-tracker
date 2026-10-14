@@ -6,6 +6,7 @@ import { CalendarClock, Search, Sparkles } from "lucide-react";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { PaceBadge, ProgressBar } from "@/components/badges";
 import { MonthSwitcher } from "@/components/month-switcher";
+import { HeaderBand } from "@/components/page-header";
 import { NativeSelect } from "@/components/native-select";
 import { PostForm } from "@/components/post-form";
 import { PostRow } from "@/components/post-row";
@@ -93,7 +94,9 @@ export function MasterView({
 
   return (
     <div className="space-y-6">
-      <MonthSwitcher month={month} today={today} basePath="/master" />
+      <HeaderBand>
+        <MonthSwitcher month={month} today={today} basePath="/master" />
+      </HeaderBand>
 
       {/* Phone: one card per brand, then the total. */}
       <div className="space-y-3 md:hidden">
@@ -467,7 +470,13 @@ function SummaryCard({
   highlight?: boolean;
 }) {
   return (
-    <div className={cn("rounded-2xl border bg-card p-4 shadow-sm", highlight && "border-primary/40 bg-primary/5")}>
+    <div
+      className={cn(
+        "rounded-2xl border border-t-4 bg-card p-4 shadow-sm",
+        highlight && "border-primary/40 bg-primary/5",
+      )}
+      style={{ borderTopColor: color }}
+    >
       <div className="flex items-start justify-between gap-2">
         {title}
         <PaceBadge pace={numbers.pace} />

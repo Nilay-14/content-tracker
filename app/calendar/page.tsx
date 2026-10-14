@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { ConnectNotice } from "@/components/connect-notice";
 import { PageHeader } from "@/components/page-header";
-import { ListSkeleton } from "@/components/skeletons";
+import { BandSkeleton, ListSkeleton } from "@/components/skeletons";
 import { listBrands, listMonthTargets } from "@/lib/db/brands";
 import { isDbConfigured } from "@/lib/db/client";
 import { listFestivals } from "@/lib/db/festivals";
@@ -15,7 +15,14 @@ export default function CalendarPage({ searchParams }: PageProps<"/calendar">) {
   return (
     <>
       <PageHeader title="Calendar" />
-      <Suspense fallback={<ListSkeleton rows={6} />}>
+      <Suspense
+        fallback={
+          <div className="space-y-4">
+            <BandSkeleton />
+            <ListSkeleton rows={6} />
+          </div>
+        }
+      >
         <CalendarContent searchParams={searchParams} />
       </Suspense>
     </>

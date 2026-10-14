@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
 import { Toaster } from "@/components/toaster";
-import { APP_NAME, APP_SHORT_NAME, THEME_COLOR } from "@/lib/theme";
+import { APP_NAME, APP_SHORT_NAME, THEME_COLOR, THEME_COLOR_DARK, THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,7 +28,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: THEME_COLOR,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: THEME_COLOR },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLOR_DARK },
+  ],
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -39,9 +42,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // The inline script adds the `dark` class before React hydrates.
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-full">
-        <main className="mx-auto w-full max-w-3xl px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))]">
+        <main className="mx-auto w-full max-w-3xl px-4 pb-[calc(5rem+env(safe-area-inset-bottom))]">
           {children}
         </main>
         <BottomTabBar />
