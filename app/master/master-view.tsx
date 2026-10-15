@@ -75,7 +75,10 @@ export function MasterView({
   const brandById = new Map(brands.map((b) => [b.id, b]));
   const festivalById = new Map(festivals.map((f) => [f.id, f]));
   const active = brands.filter((b) => b.is_active);
-  const types: ContentType[] = CONTENT_TYPES.filter((t) => t !== "other" || total.byType.other > 0);
+  // Reels are the headline number (they count toward the target); these are the rest.
+  const types: ContentType[] = CONTENT_TYPES.filter(
+    (t) => t !== "reel" && (t !== "other" || total.byType.other > 0),
+  );
 
   if (active.length === 0) {
     return (
@@ -142,17 +145,18 @@ export function MasterView({
           <thead className="bg-muted/50 text-xs text-muted-foreground">
             <tr>
               <th className="px-3 py-2.5 text-left font-medium">Brand</th>
-              <th className="px-2 py-2.5 text-right font-medium">Target</th>
-              <th className="px-2 py-2.5 text-right font-medium">Posted</th>
+              <th className="px-2 py-2.5 text-right font-medium">Reel target</th>
+              <th className="px-2 py-2.5 text-right font-medium">Reels</th>
+              <th className="px-2 py-2.5 text-right font-medium">Pending</th>
+              <th className="px-2 py-2.5 text-right font-medium">%</th>
+              <th className="px-3 py-2.5 text-left font-medium">Pace</th>
               {types.map((t) => (
                 <th key={t} className="px-2 py-2.5 text-right font-medium">
                   {CONTENT_TYPE_PLURAL[t]}
                 </th>
               ))}
               <th className="px-2 py-2.5 text-right font-medium">🎉 Festival</th>
-              <th className="px-2 py-2.5 text-right font-medium">Pending</th>
-              <th className="px-2 py-2.5 text-right font-medium">%</th>
-              <th className="px-3 py-2.5 text-left font-medium">Pace</th>
+              <th className="px-3 py-2.5 text-right font-medium">All posts</th>
             </tr>
           </thead>
           <tbody>
@@ -172,7 +176,12 @@ export function MasterView({
                     )}
                   </td>
                   <td className="px-2 py-2.5 text-right">{numbers.target}</td>
-                  <td className="px-2 py-2.5 text-right font-semibold">{numbers.posted}</td>
+                  <td className="px-2 py-2.5 text-right font-semibold">{numbers.reels}</td>
+                  <td className="px-2 py-2.5 text-right">{numbers.pending}</td>
+                  <td className="px-2 py-2.5 text-right">{formatPct(numbers.pct)}</td>
+                  <td className="px-3 py-2.5">
+                    <PaceBadge pace={numbers.pace} />
+                  </td>
                   {types.map((t) => (
                     <td key={t} className="px-2 py-2.5 text-right">
                       {typeCount(numbers, t)}
@@ -192,11 +201,7 @@ export function MasterView({
                       {numbers.festival}
                     </button>
                   </td>
-                  <td className="px-2 py-2.5 text-right">{numbers.pending}</td>
-                  <td className="px-2 py-2.5 text-right">{formatPct(numbers.pct)}</td>
-                  <td className="px-3 py-2.5">
-                    <PaceBadge pace={numbers.pace} />
-                  </td>
+                  <td className="px-3 py-2.5 text-right text-muted-foreground">{numbers.posted}</td>
                 </tr>
               );
             })}
@@ -569,8 +574,8 @@ function SummaryCard({
         <PaceBadge pace={numbers.pace} />
       </div>
       <div className="mt-2 flex items-baseline gap-1.5 tabular-nums">
-        <span className="text-3xl font-bold">{numbers.posted}</span>
-        <span className="text-muted-foreground">/ {numbers.target}</span>
+        <span className="text-3xl font-bold">{numbers.reels}</span>
+        <span className="text-muted-foreground">/ {numbers.target} reels</span>
         <span className="ml-auto text-sm font-medium">{formatPct(numbers.pct)}</span>
       </div>
       <div className="mt-2">
@@ -601,7 +606,11 @@ function SummaryCard({
         </button>
         <div className="rounded-lg bg-muted/60 py-1.5">
           <div className="text-base font-semibold tabular-nums">{numbers.pending}</div>
-          <div className="text-muted-foreground">Pending</div>
+          <div className="text-muted-foreground">Reels pending</div>
+        </div>
+        <div className="rounded-lg bg-muted/60 py-1.5">
+          <div className="text-base font-semibold tabular-nums">{numbers.posted}</div>
+          <div className="text-muted-foreground">All posts</div>
         </div>
       </div>
     </div>

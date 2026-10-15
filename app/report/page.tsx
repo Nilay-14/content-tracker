@@ -76,7 +76,9 @@ async function ReportContent({ searchParams }: Pick<PageProps<"/report">, "searc
 
   const rows = brands.map((b) => ({ brand: b, numbers: monthNumbers(b, month, posts, targets, today) }));
   const total = totalNumbers(rows.map((r) => r.numbers), month, today);
-  const types: ContentType[] = CONTENT_TYPES.filter((t) => t !== "other" || total.byType.other > 0);
+  const types: ContentType[] = CONTENT_TYPES.filter(
+    (t) => t !== "reel" && (t !== "other" || total.byType.other > 0),
+  );
 
   const mine = posts.filter((p) => brandIds.has(p.brand_id));
   const festivalPosted = mine.filter((p) => p.status === "posted" && p.festival_id);
@@ -104,7 +106,7 @@ async function ReportContent({ searchParams }: Pick<PageProps<"/report">, "searc
           {one ? one.name : "All brands"} · {monthName}
         </h2>
         <p className="text-xs text-muted-foreground">
-          Made {formatDisplayDate(today)}. Statics include carousel pages.
+          Made {formatDisplayDate(today)}. The target counts reels only. Statics include carousel pages.
         </p>
       </div>
 
@@ -115,8 +117,11 @@ async function ReportContent({ searchParams }: Pick<PageProps<"/report">, "searc
             <thead className="bg-muted/50 text-xs text-muted-foreground">
               <tr>
                 <th className={TH}>Brand</th>
-                <th className={`${TH} text-right`}>Target</th>
-                <th className={`${TH} text-right`}>Posted</th>
+                <th className={`${TH} text-right`}>Reel target</th>
+                <th className={`${TH} text-right`}>Reels</th>
+                <th className={`${TH} text-right`}>Pending</th>
+                <th className={`${TH} text-right`}>%</th>
+                <th className={TH}>Pace</th>
                 {types.map((t) => (
                   <th key={t} className={`${TH} text-right`}>
                     {CONTENT_TYPE_PLURAL[t]}
@@ -124,9 +129,7 @@ async function ReportContent({ searchParams }: Pick<PageProps<"/report">, "searc
                 ))}
                 <th className={`${TH} text-right`}>Carousel pages</th>
                 <th className={`${TH} text-right`}>Festival</th>
-                <th className={`${TH} text-right`}>Pending</th>
-                <th className={`${TH} text-right`}>%</th>
-                <th className={TH}>Pace</th>
+                <th className={`${TH} text-right`}>All posts</th>
               </tr>
             </thead>
             <tbody>
@@ -246,7 +249,10 @@ function SummaryRow({
         {label}
       </td>
       <td className={`${TD} text-right`}>{numbers.target}</td>
-      <td className={`${TD} text-right font-semibold`}>{numbers.posted}</td>
+      <td className={`${TD} text-right font-semibold`}>{numbers.reels}</td>
+      <td className={`${TD} text-right`}>{numbers.pending}</td>
+      <td className={`${TD} text-right`}>{formatPct(numbers.pct)}</td>
+      <td className={`${TD} whitespace-nowrap`}>{paceLabel(numbers.pace)}</td>
       {types.map((t) => (
         <td key={t} className={`${TD} text-right`}>
           {typeCount(numbers, t)}
@@ -254,9 +260,7 @@ function SummaryRow({
       ))}
       <td className={`${TD} text-right`}>{numbers.carouselPages}</td>
       <td className={`${TD} text-right`}>{numbers.festival}</td>
-      <td className={`${TD} text-right`}>{numbers.pending}</td>
-      <td className={`${TD} text-right`}>{formatPct(numbers.pct)}</td>
-      <td className={`${TD} whitespace-nowrap`}>{paceLabel(numbers.pace)}</td>
+      <td className={`${TD} text-right`}>{numbers.posted}</td>
     </tr>
   );
 }

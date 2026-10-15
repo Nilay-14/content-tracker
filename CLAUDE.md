@@ -112,18 +112,19 @@ A personal web app for tracking daily social media content across multiple brand
 ## Definitions (use these everywhere; put the logic in one shared file)
 
 **Monthly numbers per brand**
-- **Target** for a month = the `brand_month_targets` value if one exists; otherwise `brands.monthly_target`.
-- **Posted** = the number of entries with status `posted` whose `post_date` is in that month.
+- **Target** for a month = the `brand_month_targets` value if one exists; otherwise `brands.monthly_target`. **Targets are reel targets** (owner's rule, all brands).
+- **Reels** = the number of posted `reel` entries whose `post_date` is in that month. This is what counts toward the target.
+- **All posts** = every entry with status `posted` in that month, of any type. Shown, but not compared with the target.
 - **By type** = posted entries counted per `content_type` (Reels, Statics, Carousels, Stories, Other).
-- **Carousel pages** = the sum of `slide_count` over posted carousels. **Statics** shows single static posts **plus** carousel pages (3 statics + 5 carousels of 7 pages → Statics 38, Carousels 5 · 35 pages). Posted, Pending and % still count entries, not pages.
+- **Carousel pages** = the sum of `slide_count` over posted carousels. **Statics** shows single static posts **plus** carousel pages (3 statics + 5 carousels of 7 pages → Statics 38, Carousels 5 · 35 pages). Pages never count toward the target.
 - **Festival posts** = posted entries with `festival_id` set. They are also counted in their type: a Diwali poster counts as 1 Static **and** 1 Festival post.
-- **Pending** = max(Target − Posted, 0).
-- **Completion %** = Posted ÷ Target, shown to 1 decimal place. Show "—" if the target is 0.
+- **Pending** = max(Target − Reels, 0).
+- **Completion %** = Reels ÷ Target, shown to 1 decimal place. Show "—" if the target is 0.
 
 **Pace (current month only)**
 - Expected by today = round(Target × today's day of month ÷ days in month).
-- If Posted ≥ Expected, show **"On track"**; otherwise show **"Behind by N"**.
-- For past months, show **"Done"** if Posted ≥ Target, otherwise **"Short by N"**.
+- If Reels ≥ Expected, show **"On track"**; otherwise show **"Behind by N"**.
+- For past months, show **"Done"** if Reels ≥ Target, otherwise **"Short by N"**.
 - For future months, show "—".
 
 **Preferred days (optional)**
@@ -174,7 +175,8 @@ A personal web app for tracking daily social media content across multiple brand
 
 | State | Look |
 |---|---|
-| Posted | green |
+| Reel posted | green |
+| Posted, but no reel (static, carousel, story…) | blue |
 | In progress (planned, shot, edited, scheduled) | amber |
 | Idea | light |
 | Skipped | grey |
@@ -182,6 +184,7 @@ A personal web app for tracking daily social media content across multiple brand
 | Rescheduled | blue-grey |
 | Today, preferred day, nothing yet | outlined |
 | Festival post on that day | a small 🎉 marker |
+| What was posted | a small icon per type (reel, static, carousel, story, other), with a count when more than one |
 
 - Tapping a day opens a bottom sheet with that day's entries and an "Add entry" button, prefilled with that date and brand.
 - A toggle switches to a **List view** with columns Date, Day, Content, Type, Festival, Status and Notes, like the old sheet.
@@ -197,16 +200,14 @@ A personal web app for tracking daily social media content across multiple brand
 | Column | Notes |
 |---|---|
 | Brand | in its colour |
-| Target | |
-| Posted | |
-| Reels | |
+| Reel target | |
+| Reels | counts toward the target |
+| Pending, %, Pace | from reels |
 | Statics | |
 | Carousels | |
 | Stories | |
 | 🎉 Festival | |
-| Pending | |
-| % | |
-| Pace | |
+| All posts | every posted entry |
 
 - Show an Other column only when it is above 0.
 - Tapping the 🎉 Festival number lists those posts, e.g. "Navratri: Static, 5-Oct" and "Diwali: Static, 20-Oct".

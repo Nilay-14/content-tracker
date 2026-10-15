@@ -259,8 +259,8 @@ export function TodayView({
                       />
                     )}
                     <span className="tabular-nums">
-                      <span className="font-semibold">{numbers.posted}</span>
-                      <span className="text-muted-foreground"> / {numbers.target}</span>
+                      <span className="font-semibold">{numbers.reels}</span>
+                      <span className="text-muted-foreground"> / {numbers.target} reels</span>
                     </span>
                     <span className="w-14 text-right text-xs text-muted-foreground tabular-nums">
                       {formatPct(numbers.pct)}

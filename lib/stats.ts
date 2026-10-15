@@ -126,15 +126,23 @@ export function paceTone(pace: Pace): "good" | "warn" | "neutral" {
   return "neutral";
 }
 
+/**
+ * The monthly target counts posted REELS only. Statics, carousels, stories and
+ * festival posts are counted and shown, but don't count toward the target.
+ */
 export type MonthNumbers = {
   target: number;
+  /** Posted reels: what counts toward the target. */
+  reels: number;
+  /** Every posted entry, of any type. */
   posted: number;
   byType: Record<ContentType, number>;
   /** Pages across all posted carousels. They also count as statics (see `typeCount`). */
   carouselPages: number;
   festival: number;
+  /** Target − reels, never below 0. */
   pending: number;
-  /** Posted ÷ Target × 100, or null when the target is 0. */
+  /** Reels ÷ Target × 100, or null when the target is 0. */
   pct: number | null;
   pace: Pace;
 };
@@ -152,15 +160,17 @@ function finish(
   month: ISODate,
   today: ISODate,
 ): MonthNumbers {
+  const reels = byType.reel;
   return {
     target,
+    reels,
     posted,
     byType,
     carouselPages,
     festival,
-    pending: Math.max(target - posted, 0),
-    pct: target > 0 ? (posted / target) * 100 : null,
-    pace: computePace(target, posted, month, today),
+    pending: Math.max(target - reels, 0),
+    pct: target > 0 ? (reels / target) * 100 : null,
+    pace: computePace(target, reels, month, today),
   };
 }
 
@@ -211,7 +221,6 @@ export function totalNumbers(rows: MonthNumbers[], month: ISODate, today: ISODat
 /**
  * The number shown for a type. Statics = single static posts plus every page
  * of the posted carousels (5 carousels of 7 pages and 3 statics → 38 statics).
- * Posted, Pending and % still count entries, not pages.
  */
 export function typeCount(n: MonthNumbers, type: ContentType): number {
   return type === "static" ? n.byType.static + n.carouselPages : n.byType[type];
@@ -289,7 +298,10 @@ export function isDueToday(brand: Brand, posts: Post[], today: ISODate): boolean
 // --- Calendar day states ------------------------------------------------------
 
 export type DayState =
-  | "posted"
+  /** A reel was posted: counts toward the target. */
+  | "reel"
+  /** Something was posted, but no reel (static, carousel, story…). */
+  | "other"
   | "in-progress"
   | "idea"
   | "skipped"
@@ -300,7 +312,8 @@ export type DayState =
 
 export function dayState(brand: Brand, date: ISODate, posts: Post[], today: ISODate): DayState {
   const onDay = posts.filter((p) => p.brand_id === brand.id && p.post_date === date);
-  if (onDay.some((p) => p.status === "posted")) return "posted";
+  if (onDay.some((p) => p.status === "posted" && p.content_type === "reel")) return "reel";
+  if (onDay.some((p) => p.status === "posted")) return "other";
   if (onDay.some((p) => p.status === "skipped")) return "skipped";
   if (posts.some((p) => p.brand_id === brand.id && p.rescheduled_from === date)) {
     return "rescheduled";

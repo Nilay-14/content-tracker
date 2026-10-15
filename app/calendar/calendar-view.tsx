@@ -23,11 +23,20 @@ import {
   type DayState,
   type MonthNumbers,
 } from "@/lib/stats";
-import { CONTENT_TYPE_LABEL, WEEKDAY_SHORT, type Brand, type Festival, type Post } from "@/lib/types";
+import { TYPE_ICON } from "@/components/type-icon";
+import {
+  CONTENT_TYPE_LABEL,
+  CONTENT_TYPES,
+  WEEKDAY_SHORT,
+  type Brand,
+  type Festival,
+  type Post,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const STATE_STYLE: Record<DayState, string> = {
-  posted: "bg-emerald-500 text-white",
+  reel: "bg-emerald-500 text-white",
+  other: "bg-sky-500 text-white",
   "in-progress": "bg-amber-300 text-amber-950",
   idea: "bg-violet-100 text-violet-900 dark:bg-violet-950 dark:text-violet-200",
   skipped: "bg-zinc-300 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200",
@@ -38,7 +47,8 @@ const STATE_STYLE: Record<DayState, string> = {
 };
 
 const STATE_LABEL: Record<DayState, string> = {
-  posted: "Posted",
+  reel: "Reel posted",
+  other: "Posted, no reel",
   "in-progress": "In progress",
   idea: "Idea",
   skipped: "Skipped",
@@ -48,7 +58,7 @@ const STATE_LABEL: Record<DayState, string> = {
   empty: "Nothing yet",
 };
 
-const LEGEND: DayState[] = ["posted", "in-progress", "idea", "skipped", "missed", "rescheduled", "due"];
+const LEGEND: DayState[] = ["reel", "other", "in-progress", "idea", "skipped", "missed", "rescheduled", "due"];
 
 type Props =
   | { empty: true; today: ISODate; month: ISODate; view: "grid" | "list" }
@@ -187,12 +197,18 @@ function BrandCalendar({
               const state = dayState(brand, d, posts, today);
               const entries = postsOn(d);
               const festive = entries.some((p) => p.festival_id);
+              // What was posted that day, per type, e.g. 1 reel + 1 carousel.
+              const postedTypes = CONTENT_TYPES.map(
+                (t) => [t, entries.filter((p) => p.status === "posted" && p.content_type === t).length] as const,
+              ).filter(([, n]) => n > 0);
               return (
                 <button
                   key={d}
                   type="button"
                   onClick={() => setSheet({ kind: "day", date: d })}
-                  aria-label={`${formatDisplayDate(d)}: ${STATE_LABEL[state]}, ${entries.length} entries`}
+                  aria-label={`${formatDisplayDate(d)}: ${STATE_LABEL[state]}${postedTypes
+                    .map(([t, n]) => `, ${n} ${CONTENT_TYPE_LABEL[t]}`)
+                    .join("")}, ${entries.length} entries`}
                   className={cn(
                     "relative flex aspect-square flex-col items-start rounded-lg p-1 text-left text-sm font-semibold transition-transform active:scale-95 sm:p-1.5",
                     STATE_STYLE[state],
@@ -201,9 +217,17 @@ function BrandCalendar({
                 >
                   <span className="leading-none">{fromISODate(d).getDate()}</span>
                   {festive && <span className="absolute top-0.5 right-0.5 text-xs leading-none sm:text-sm">🎉</span>}
-                  {entries.length > 1 && (
-                    <span className="absolute right-1 bottom-1 rounded-full bg-black/20 px-1 text-[10px] leading-4 font-bold text-current">
-                      {entries.length}
+                  {postedTypes.length > 0 && (
+                    <span className="mt-auto flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] leading-none font-bold">
+                      {postedTypes.map(([t, n]) => {
+                        const Icon = TYPE_ICON[t];
+                        return (
+                          <span key={t} className="inline-flex items-center">
+                            <Icon className="size-3.5 sm:size-4" strokeWidth={2.5} aria-hidden />
+                            {n > 1 && <span className="ml-px">{n}</span>}
+                          </span>
+                        );
+                      })}
                     </span>
                   )}
                 </button>
@@ -218,6 +242,18 @@ function BrandCalendar({
               </span>
             ))}
             <span className="inline-flex items-center gap-1">🎉 Festival post</span>
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+            {CONTENT_TYPES.map((t) => {
+              const Icon = TYPE_ICON[t];
+              return (
+                <span key={t} className="inline-flex items-center gap-1">
+                  <Icon className="size-3.5" aria-hidden />
+                  {CONTENT_TYPE_LABEL[t]}
+                </span>
+              );
+            })}
+            <span>· a number means more than one</span>
           </div>
           {brand.preferred_days.length === 0 && (
             <p className="text-xs text-muted-foreground">

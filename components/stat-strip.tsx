@@ -1,11 +1,11 @@
 import { PaceBadge } from "@/components/badges";
 import { formatPct, type MonthNumbers } from "@/lib/stats";
 
-/** Target · Posted · Pending · % · Pace in one row of tiles. */
+/** Reel target · Reels · Pending · % · Pace in one row of tiles. */
 export function StatStrip({ numbers }: { numbers: MonthNumbers }) {
   const tiles = [
-    { label: "Target", value: numbers.target },
-    { label: "Posted", value: numbers.posted },
+    { label: "Reel target", value: numbers.target },
+    { label: "Reels", value: numbers.reels },
     { label: "Pending", value: numbers.pending },
     { label: "Done", value: formatPct(numbers.pct) },
   ];
