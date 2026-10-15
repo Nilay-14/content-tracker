@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { CalendarClock, ChartNoAxesColumn, Search, Sparkles } from "lucide-react";
+import { CalendarClock, ChartNoAxesColumn, FileText, Search, Sparkles } from "lucide-react";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { PaceBadge, ProgressBar } from "@/components/badges";
 import { MonthSwitcher } from "@/components/month-switcher";
@@ -203,6 +203,13 @@ export function MasterView({
           </tbody>
         </table>
       </div>
+
+      <Link
+        href={`/report?${new URLSearchParams({ month: monthParam(month) })}`}
+        className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+      >
+        <FileText /> Monthly report (print or PDF)
+      </Link>
 
       {active.some(hasPreferredDays) && (
         <MissedList

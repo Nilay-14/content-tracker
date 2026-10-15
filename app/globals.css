@@ -134,3 +134,25 @@
     @apply font-sans;
   }
 }
+/* The monthly report prints on white A4, even in dark mode. */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+  :root,
+  :root.dark {
+    color-scheme: light;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.15 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.15 0 0);
+    --muted: oklch(0.96 0 0);
+    --muted-foreground: oklch(0.45 0 0);
+    --border: oklch(0.82 0 0);
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+}

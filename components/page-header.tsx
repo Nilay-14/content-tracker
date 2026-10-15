@@ -12,7 +12,7 @@ const BLEED = "mx-[calc(50%_-_50vw)] px-[calc(50vw_-_50%)] bg-header text-header
  */
 export function PageHeader({ title, subtitle }: { title: string; subtitle?: ReactNode }) {
   return (
-    <header className={cn(BLEED, "mb-5 rounded-b-[1.75rem] pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-5")}>
+    <header className={cn(BLEED, "mb-5 rounded-b-[1.75rem] pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-5 print:hidden")}>
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-[1.65rem] font-bold tracking-tight">{title}</h1>
         <ThemeToggle />

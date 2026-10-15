@@ -22,7 +22,7 @@ export function BottomTabBar() {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_-12px_rgb(0_0_0/0.15)] backdrop-blur supports-[backdrop-filter]:bg-card/85"
+      className="fixed inset-x-0 bottom-0 z-40 border-t print:hidden bg-card/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_20px_-12px_rgb(0_0_0/0.15)] backdrop-blur supports-[backdrop-filter]:bg-card/85"
     >
       <ul className="mx-auto grid max-w-3xl grid-cols-4">
         {TABS.map(({ href, label, icon: Icon }) => {
