@@ -78,7 +78,7 @@ type FormState = {
 
 function initialState(
   post: Post | null,
-  defaults: { brand_id: string; post_date: ISODate | null; status?: PostStatus },
+  defaults: { brand_id: string; post_date: ISODate | null; status?: PostStatus; festival_id?: string | null },
   today: ISODate,
 ): FormState {
   return {
@@ -89,8 +89,8 @@ function initialState(
     slide_count: post?.slide_count?.toString() ?? "",
     status: post?.status ?? defaults.status ?? defaultStatus(defaults.post_date, today),
     skip_reason: post?.skip_reason ?? "",
-    festivalOn: Boolean(post?.festival_id),
-    festival_id: post?.festival_id ?? "",
+    festivalOn: Boolean(post ? post.festival_id : defaults.festival_id),
+    festival_id: post?.festival_id ?? defaults.festival_id ?? "",
     post_url: post?.post_url ?? "",
     people: post?.people ?? [],
     notes: post?.notes ?? "",
@@ -117,6 +117,8 @@ export function PostForm({
     post_date: ISODate | null;
     /** Starting status for a new entry; otherwise worked out from the date. */
     status?: PostStatus;
+    /** Festival already picked for a new entry (the festival banner's Plan button). */
+    festival_id?: string | null;
     rescheduled_from?: ISODate | null;
   };
   brands: Brand[];

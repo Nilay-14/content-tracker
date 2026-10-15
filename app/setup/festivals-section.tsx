@@ -84,7 +84,7 @@ export function FestivalsSection({ festivals, today }: { festivals: Festival[]; 
   }
 
   return (
-    <section className="space-y-3">
+    <section id="festivals" className="scroll-mt-4 space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Festivals</h2>
         <Button variant="outline" size="sm" onClick={() => setEditing("new")}>

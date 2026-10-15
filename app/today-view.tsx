@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { differenceInCalendarDays, format } from "date-fns";
@@ -67,6 +67,7 @@ export function TodayView({
   const [remembered, remember] = useRememberedBrand();
   const [picked, setPicked] = useState<string | null>(null);
   const editSheet = useSheet<Post>();
+  const planSheet = useSheet<{ festival: Festival; brand: Brand }>();
   const topRef = useRef<HTMLDivElement>(null);
 
   const valid = (id: string | null) => (id && brands.some((b) => b.id === id) ? id : null);
@@ -107,6 +108,8 @@ export function TodayView({
         <DateBar date={date} today={today} />
       </HeaderBand>
 
+      <MissingDatesNudge count={festivals.filter((f) => f.is_active && !f.festival_date).length} today={today} />
+
       {banner.length > 0 && (
         <div className="space-y-2">
           {banner.map(({ festival, brands: states }) => {
@@ -125,12 +128,23 @@ export function TodayView({
                     {days === 0 ? "is today" : days === 1 ? "tomorrow" : `in ${days} days`}
                   </span>
                 </div>
-                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[13px]">
-                  {states.map(({ brand: b, state }) => (
-                    <span key={b.id} className="whitespace-nowrap">
-                      {b.name} {BANNER_ICON[state]}
-                    </span>
-                  ))}
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
+                  {states.map(({ brand: b, state }) =>
+                    state === "none" ? (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => planSheet.show({ festival, brand: b })}
+                        className="inline-flex min-h-9 items-center gap-1 rounded-full border border-amber-300 bg-white/70 px-2.5 whitespace-nowrap hover:bg-white dark:border-amber-800 dark:bg-amber-950/60"
+                      >
+                        {b.name} {BANNER_ICON[state]} <span className="font-semibold text-primary">Plan</span>
+                      </button>
+                    ) : (
+                      <span key={b.id} className="whitespace-nowrap">
+                        {b.name} {BANNER_ICON[state]}
+                      </span>
+                    ),
+                  )}
                 </div>
               </div>
             );
@@ -277,6 +291,31 @@ export function TodayView({
         </ul>
       </section>
 
+      <BottomSheet
+        open={planSheet.open}
+        onOpenChange={planSheet.onOpenChange}
+        title={planSheet.value ? `Plan for ${planSheet.value.festival.name}` : "Plan"}
+      >
+        {planSheet.value && (
+          <PostForm
+            key={planSheet.key}
+            post={null}
+            defaults={{
+              brand_id: planSheet.value.brand.id,
+              post_date:
+                planSheet.value.festival.festival_date! >= today ? planSheet.value.festival.festival_date : today,
+              status: "planned",
+              festival_id: planSheet.value.festival.id,
+            }}
+            brands={brands}
+            festivals={festivals}
+            today={today}
+            showBrandAndDate
+            onSaved={planSheet.close}
+          />
+        )}
+      </BottomSheet>
+
       <BottomSheet open={editSheet.open} onOpenChange={editSheet.onOpenChange} title="Edit entry">
         {editSheet.value && (
           <PostForm
@@ -292,6 +331,65 @@ export function TodayView({
           />
         )}
       </BottomSheet>
+    </div>
+  );
+}
+
+const NUDGE_KEY = "festival-dates-nudge-hidden";
+const SERVER = "server";
+let hiddenThisVisit: string | null = null;
+
+function subscribeNudge(onChange: () => void) {
+  window.addEventListener(NUDGE_KEY, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(NUDGE_KEY, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+function readNudge(): string | null {
+  try {
+    return window.localStorage.getItem(NUDGE_KEY) ?? hiddenThisVisit;
+  } catch {
+    return hiddenThisVisit;
+  }
+}
+
+/**
+ * Festivals need this year's date for the banner to remind you. Shown while
+ * some have none; "Hide" hides it on this device for the rest of the month.
+ */
+function MissingDatesNudge({ count, today }: { count: number; today: ISODate }) {
+  const monthKey = today.slice(0, 7);
+  // Only this device knows if it was hidden, so it appears after hydration (no flash).
+  const hiddenFor = useSyncExternalStore(subscribeNudge, readNudge, () => SERVER);
+  if (count === 0 || hiddenFor === SERVER || hiddenFor === monthKey) return null;
+
+  return (
+    <div className="flex items-start gap-2 rounded-xl border border-dashed border-amber-300 bg-amber-50/60 px-3 py-2 text-sm dark:border-amber-800 dark:bg-amber-950/30">
+      <span aria-hidden>🗓️</span>
+      <p className="flex-1">
+        {count} {count === 1 ? "festival has" : "festivals have"} no date this year, so you won&apos;t get a reminder 10
+        days before.{" "}
+        <Link href="/setup#festivals" className="font-semibold text-primary underline-offset-2 hover:underline">
+          Add dates
+        </Link>
+      </p>
+      <button
+        type="button"
+        className="-my-1 min-h-9 rounded-full px-2 text-xs text-muted-foreground hover:bg-muted"
+        onClick={() => {
+          try {
+            window.localStorage.setItem(NUDGE_KEY, monthKey);
+          } catch {
+            hiddenThisVisit = monthKey; // storage blocked: hide for this visit only
+          }
+          window.dispatchEvent(new Event(NUDGE_KEY));
+        }}
+      >
+        Hide
+      </button>
     </div>
   );
 }
