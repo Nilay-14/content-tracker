@@ -291,4 +291,4 @@ Ganesh Chaturthi, Navratri, Dussehra, Karva Chauth, Dhanteras, Diwali, Bhai Dooj
 - [x] 10 Performance results
 - [ ] 11 Monthly report export
 - [ ] 12 Import September sheet
-- [ ] 13 Idea bank
+- [x] 13 Idea bank

@@ -52,6 +52,32 @@ export async function listReschedulesFor(
   return data;
 }
 
+/** Ideas with no date yet, for every brand, newest first. */
+export async function listIdeas(): Promise<Post[]> {
+  const { data, error } = await db()
+    .from("posts")
+    .select("*")
+    .is("post_date", null)
+    .eq("status", "idea")
+    .order("created_at", { ascending: false })
+    .limit(1000);
+  if (error) fail("Loading ideas", error);
+  return data;
+}
+
+/** Gives an idea a date and makes it planned. */
+export async function scheduleIdea(id: string, date: ISODate): Promise<Post> {
+  const { data, error } = await db()
+    .from("posts")
+    .update({ post_date: date, status: "planned" })
+    .eq("id", id)
+    .eq("status", "idea")
+    .select()
+    .single();
+  if (error) fail("Scheduling idea", error);
+  return data;
+}
+
 /** A brand's entries since `since` (plus undated ideas), newest first, for typing hints. */
 export async function listBrandHistory(brandId: string, since: ISODate): Promise<HistoryRow[]> {
   const { data, error } = await db()

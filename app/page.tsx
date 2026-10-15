@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { listBrands, listMonthTargets } from "@/lib/db/brands";
 import { isDbConfigured } from "@/lib/db/client";
 import { listFestivals } from "@/lib/db/festivals";
-import { listFestivalPosts, listPostsBetween, listPostsOnDate } from "@/lib/db/posts";
+import { listFestivalPosts, listIdeas, listPostsBetween, listPostsOnDate } from "@/lib/db/posts";
 import { addDaysISO, monthStartISO, todayIST } from "@/lib/ist";
 import { isDueToday, isValidISODate, monthEndISO, monthNumbers } from "@/lib/stats";
 import { IN_PROGRESS_STATUSES } from "@/lib/types";
@@ -44,13 +44,14 @@ async function TodayContent({ searchParams }: Pick<PageProps<"/">, "searchParams
   const brandParam = typeof params.brand === "string" ? params.brand : null;
   const month = monthStartISO(date);
 
-  const [brands, festivals, postsOnDate, monthPosts, targets, todayPosts] = await Promise.all([
+  const [brands, festivals, postsOnDate, monthPosts, targets, todayPosts, ideas] = await Promise.all([
     listBrands({ activeOnly: true }),
     listFestivals({ activeOnly: true }),
     listPostsOnDate(date),
     listPostsBetween(month, monthEndISO(month)),
     listMonthTargets({ month }),
     date === today ? null : listPostsOnDate(today),
+    listIdeas(),
   ]);
 
   // Festivals whose date falls in the next 10 days from the chosen date.
@@ -92,6 +93,7 @@ async function TodayContent({ searchParams }: Pick<PageProps<"/">, "searchParams
       postsOnDate={postsOnDate}
       banner={banner}
       progress={progress}
+      ideas={ideas}
       month={month}
       initialBrandId={brandParam}
     />

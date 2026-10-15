@@ -4,16 +4,29 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { differenceInCalendarDays, format } from "date-fns";
-import { CalendarDays, ChevronLeft, ChevronRight, Hourglass, Sparkles } from "lucide-react";
+import {
+  CalendarDays,
+  CalendarPlus,
+  ChevronLeft,
+  ChevronRight,
+  Hourglass,
+  Lightbulb,
+  Plus,
+  Sparkles,
+} from "lucide-react";
+import { addIdea, scheduleIdea } from "@/app/actions/posts";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { PaceBadge, ProgressBar } from "@/components/badges";
 import { HeaderBand, ON_BAND } from "@/components/page-header";
 import { PostForm } from "@/components/post-form";
 import { PostRow } from "@/components/post-row";
+import { useRunAction } from "@/components/use-run-action";
 import { useRememberedBrand } from "@/components/use-remembered-brand";
 import { useSheet } from "@/components/use-sheet";
-import { buttonVariants } from "@/components/ui/button";
-import { addDaysISO, formatDisplayDate, fromISODate, type ISODate } from "@/lib/ist";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { addDaysISO, formatDisplayDate, formatShortDate, fromISODate, type ISODate } from "@/lib/ist";
 import { formatPct, type MonthNumbers } from "@/lib/stats";
 import type { Brand, Festival, Post } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -35,6 +48,7 @@ export function TodayView({
   postsOnDate,
   banner,
   progress,
+  ideas,
   month,
   initialBrandId,
 }: {
@@ -45,6 +59,8 @@ export function TodayView({
   postsOnDate: Post[];
   banner: BannerItem[];
   progress: ProgressRow[];
+  /** Undated ideas for every brand. */
+  ideas: Post[];
   month: ISODate;
   initialBrandId: string | null;
 }) {
@@ -198,6 +214,16 @@ export function TodayView({
         </section>
       )}
 
+      {brand && (
+        <IdeasCard
+          brand={brand}
+          ideas={ideas.filter((p) => p.brand_id === brand.id)}
+          date={date}
+          today={today}
+          onEdit={editSheet.show}
+        />
+      )}
+
       <section className="rounded-2xl border bg-card p-4 shadow-sm">
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="text-base font-semibold">
@@ -267,6 +293,131 @@ export function TodayView({
         )}
       </BottomSheet>
     </div>
+  );
+}
+
+const IDEAS_PREVIEW = 5;
+
+/** The brand's idea bank: quick add, and Schedule to give an idea a date. */
+function IdeasCard({
+  brand,
+  ideas,
+  date,
+  today,
+  onEdit,
+}: {
+  brand: Brand;
+  ideas: Post[];
+  date: ISODate;
+  today: ISODate;
+  onEdit: (post: Post) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const [showAll, setShowAll] = useState(false);
+  const scheduleSheet = useSheet<Post>();
+  const { pending, run } = useRunAction();
+  const shown = showAll ? ideas : ideas.slice(0, IDEAS_PREVIEW);
+
+  function add() {
+    if (!draft.trim()) return;
+    run(() => addIdea(brand.id, draft), { success: "Idea saved", onSuccess: () => setDraft("") });
+  }
+
+  return (
+    <section className="rounded-2xl border bg-card p-4 shadow-sm">
+      <h2 className="mb-3 flex items-center gap-2 text-base font-semibold">
+        <Lightbulb className="size-4 text-amber-500" />
+        Ideas <span className="font-normal text-muted-foreground">· {brand.name}</span>
+        {ideas.length > 0 && <span className="ml-auto text-sm font-normal text-muted-foreground">{ideas.length}</span>}
+      </h2>
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          add();
+        }}
+      >
+        <Input
+          aria-label="New idea"
+          placeholder="Jot down an idea"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          autoComplete="off"
+          enterKeyHint="done"
+        />
+        <Button type="submit" variant="secondary" disabled={pending || !draft.trim()}>
+          <Plus /> Add
+        </Button>
+      </form>
+      {ideas.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          Save ideas here with no date. When you&apos;re ready, tap Schedule to plan one.
+        </p>
+      ) : (
+        <ul className="mt-3 divide-y overflow-hidden rounded-xl border">
+          {shown.map((p) => (
+            <li key={p.id} className="flex items-center gap-1 py-1 pr-1 pl-3">
+              <button
+                type="button"
+                className="min-h-11 min-w-0 flex-1 truncate text-left text-sm font-medium"
+                onClick={() => onEdit(p)}
+              >
+                {p.title}
+              </button>
+              <Button variant="outline" onClick={() => scheduleSheet.show(p)}>
+                <CalendarPlus /> Schedule
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {ideas.length > IDEAS_PREVIEW && (
+        <Button variant="ghost" className="mt-1 w-full" onClick={() => setShowAll((s) => !s)}>
+          {showAll ? "Show fewer" : `Show all ${ideas.length}`}
+        </Button>
+      )}
+
+      <BottomSheet open={scheduleSheet.open} onOpenChange={scheduleSheet.onOpenChange} title="Schedule idea">
+        {scheduleSheet.value && (
+          <ScheduleForm
+            key={scheduleSheet.key}
+            idea={scheduleSheet.value}
+            initialDate={date >= today ? date : today}
+            onDone={scheduleSheet.close}
+          />
+        )}
+      </BottomSheet>
+    </section>
+  );
+}
+
+function ScheduleForm({ idea, initialDate, onDone }: { idea: Post; initialDate: ISODate; onDone: () => void }) {
+  const [day, setDay] = useState<ISODate>(initialDate);
+  const { pending, run } = useRunAction();
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        run(() => scheduleIdea(idea.id, day), {
+          success: day ? `Planned for ${formatShortDate(day)}` : undefined,
+          onSuccess: onDone,
+        });
+      }}
+    >
+      <p className="text-sm">
+        <span className="font-medium">{idea.title}</span>
+        <span className="text-muted-foreground"> becomes a Planned entry on this date.</span>
+      </p>
+      <div className="space-y-1.5">
+        <Label htmlFor="schedule-date">Date</Label>
+        <Input id="schedule-date" type="date" required value={day} onChange={(e) => setDay(e.target.value)} />
+      </div>
+      <Button type="submit" size="lg" className="w-full" disabled={pending || !day}>
+        {pending ? "Scheduling…" : "Schedule"}
+      </Button>
+    </form>
   );
 }
 
