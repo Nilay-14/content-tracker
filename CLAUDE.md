@@ -23,7 +23,9 @@ A personal web app for tracking daily social media content across multiple brand
 
 ## Access (no login, by the owner's choice)
 
-- **No login, accounts or user_id columns.** Whoever opens the site can use it. Don't add authentication unless asked.
+- **No login, accounts or user_id columns.** Whoever opens the site can use it, unless the owner turns on the optional **PIN lock** (Setup).
+- **PIN lock:** a 4–8 digit PIN; only a salted scrypt hash is stored in `app_settings`. When set, every page (`requireUnlocked`) and every save (`attempt` → `assertUnlocked`) needs the device to be unlocked; the device is remembered for a year with an httpOnly cookie signed with the server key. Changing or removing the PIN needs the current one and locks every other device. 5 wrong tries in a row → 15-minute wait. Logic lives in `lib/lock.ts`.
+- **Share links:** `/share/<brands.share_token>` is a read-only page for one brand (reels vs target, calendar, entries; no notes, people or results). It works without the PIN. Made, replaced or turned off from the brand editor on Setup.
 - **The database is only reached from the server**, through Server Actions or Route Handlers.
   - The server uses `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Neither gets a `NEXT_PUBLIC_` prefix, and both are imported only in server-only files.
   - The browser never talks to Supabase directly.
@@ -61,6 +63,7 @@ A personal web app for tracking daily social media content across multiple brand
 | is_active | boolean | default true; false means archived |
 | sort_order | int | default 0 |
 | created_at | timestamptz | default `now()` |
+| share_token | text unique null | read-only share link; null = no link |
 
 ### `brand_month_targets` (optional override of the target for one month)
 
@@ -107,7 +110,15 @@ A personal web app for tracking daily social media content across multiple brand
 | created_at, updated_at | timestamptz | `updated_at` is maintained by a trigger |
 
 - **Indexes:** `posts(post_date)`, `posts(brand_id, post_date)` and `posts(festival_id)`.
-- **RLS:** enabled on all four tables, with no policies (see Access).
+- **RLS:** enabled on all tables, with no policies (see Access).
+
+### `app_settings` (one row, id = 1)
+
+| column | type | notes |
+|---|---|---|
+| pin_hash, pin_salt | text null | scrypt hash of the PIN; null = no PIN lock |
+| failed_attempts | int | wrong tries in a row |
+| locked_until | timestamptz null | set after 5 wrong tries |
 
 ## Definitions (use these everywhere; put the logic in one shared file)
 
@@ -274,9 +285,7 @@ Ganesh Chaturthi, Navratri, Dussehra, Karva Chauth, Dhanteras, Diwali, Bhai Dooj
 
 ## Later (out of scope for now)
 
-- An optional simple PIN lock
 - Reminders by push notification or WhatsApp
-- Read-only share links for brand owners
 - Auto-pulling Instagram insights through the Meta API
 - Offline mode
 
@@ -295,3 +304,15 @@ Ganesh Chaturthi, Navratri, Dussehra, Karva Chauth, Dhanteras, Diwali, Bhai Dooj
 - [x] 11 Monthly report export (printable PDF page; Excel skipped by the owner's choice)
 - [x] 12 Import September sheet
 - [x] 13 Idea bank
+
+**Extras the owner asked for (after the 13 steps)**
+
+- [x] Carousel pages (`slide_count`), counted into Statics
+- [x] Targets count reels only; calendar shows reel/other colours and type icons
+- [x] Bold indigo header and a light/dark toggle
+- [x] Undo after deleting an entry
+- [x] Master: Copy summary / send on WhatsApp
+- [x] Master: Shoot list (To shoot → To edit → Ready → Scheduled → Posted)
+- [x] Today: festival banner Plan buttons, and a nudge to add festival dates
+- [x] Read-only share link per brand (`/share/<token>`)
+- [x] Optional PIN lock
