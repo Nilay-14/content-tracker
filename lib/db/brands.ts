@@ -22,6 +22,27 @@ export async function listBrands(opts: { activeOnly?: boolean } = {}): Promise<B
   return data;
 }
 
+/** The brand behind a share link, or null. */
+export async function getBrandByShareToken(token: string): Promise<Brand | null> {
+  const { data, error } = await db().from("brands").select("*").eq("share_token", token).maybeSingle();
+  if (error) {
+    if (error.code === "42703" || error.code === "PGRST204") return null; // migration 0003 not run yet
+    fail("Loading shared brand", error);
+  }
+  return data;
+}
+
+/** Sets (or clears, with null) a brand's share link token. */
+export async function setShareToken(id: string, share_token: string | null) {
+  const { error } = await db().from("brands").update({ share_token }).eq("id", id);
+  if (error) {
+    if (error.code === "42703" || error.code === "PGRST204") {
+      throw new Error("Share links need a database update first: run supabase/migrations/0003 in Supabase.");
+    }
+    fail("Saving share link", error);
+  }
+}
+
 export async function countPostsByBrand(brandIds: string[]): Promise<Record<string, number>> {
   const counts = await Promise.all(
     brandIds.map(async (id) => {

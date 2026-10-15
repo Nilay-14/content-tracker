@@ -6,6 +6,7 @@ import { BandSkeleton, ListSkeleton } from "@/components/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listBrands, listMonthTargets } from "@/lib/db/brands";
 import { isDbConfigured } from "@/lib/db/client";
+import { requireUnlocked } from "@/lib/lock";
 import { listFestivals } from "@/lib/db/festivals";
 import { listFestivalPosts, listIdeas, listPostsBetween, listPostsOnDate } from "@/lib/db/posts";
 import { addDaysISO, monthStartISO, todayIST } from "@/lib/ist";
@@ -37,6 +38,7 @@ export default function TodayPage({ searchParams }: PageProps<"/">) {
 async function TodayContent({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
   await connection();
   if (!isDbConfigured()) return <ConnectNotice />;
+  await requireUnlocked();
 
   const params = await searchParams;
   const today = todayIST();

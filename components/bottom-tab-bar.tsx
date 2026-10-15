@@ -18,6 +18,7 @@ function isActive(pathname: string, href: string) {
 
 export function BottomTabBar() {
   const pathname = usePathname();
+  if (pathname.startsWith("/unlock") || pathname.startsWith("/share")) return null;
 
   return (
     <nav

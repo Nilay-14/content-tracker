@@ -9,6 +9,14 @@ import type {
   PostStatus,
 } from "@/lib/types";
 
+type AppSettings = {
+  id: number;
+  pin_hash: string | null;
+  pin_salt: string | null;
+  failed_attempts: number;
+  locked_until: string | null;
+};
+
 type Table<Row, Insert> = {
   Row: Row;
   Insert: Insert;
@@ -31,6 +39,7 @@ export type Database = {
       brand_month_targets: Table<BrandMonthTarget, TargetInsert>;
       festivals: Table<Festival, FestivalInsert>;
       posts: Table<Post, PostInsert>;
+      app_settings: Table<AppSettings, Partial<AppSettings>>;
     };
     Views: Record<never, never>;
     Functions: Record<never, never>;

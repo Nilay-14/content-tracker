@@ -7,6 +7,7 @@ import { HeaderBand, PageHeader } from "@/components/page-header";
 import { BandSkeleton, ListSkeleton } from "@/components/skeletons";
 import { listBrands, listMonthTargets } from "@/lib/db/brands";
 import { isDbConfigured } from "@/lib/db/client";
+import { requireUnlocked } from "@/lib/lock";
 import { listFestivals } from "@/lib/db/festivals";
 import { listPostsBetween } from "@/lib/db/posts";
 import { formatDisplayDate, fromISODate, todayIST } from "@/lib/ist";
@@ -55,6 +56,7 @@ const TD = "border-b px-2 py-1.5 align-top";
 async function ReportContent({ searchParams }: Pick<PageProps<"/report">, "searchParams">) {
   await connection();
   if (!isDbConfigured()) return <ConnectNotice />;
+  await requireUnlocked();
 
   const params = await searchParams;
   const today = todayIST();

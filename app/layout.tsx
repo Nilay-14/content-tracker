@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { BottomTabBar } from "@/components/bottom-tab-bar";
@@ -52,7 +53,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <main className="mx-auto w-full max-w-3xl px-4 pb-[calc(5rem+env(safe-area-inset-bottom))]">
           {children}
         </main>
-        <BottomTabBar />
+        {/* Reads the URL, so it needs a boundary on pages like /share/<token>. */}
+        <Suspense fallback={null}>
+          <BottomTabBar />
+        </Suspense>
         <Toaster />
       </body>
     </html>

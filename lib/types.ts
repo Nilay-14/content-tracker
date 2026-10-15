@@ -76,6 +76,8 @@ export type Brand = {
   is_active: boolean;
   sort_order: number;
   created_at: string;
+  /** Read-only share link token (/share/<token>); null when there's no link. */
+  share_token?: string | null;
 };
 
 export type BrandMonthTarget = {

@@ -20,9 +20,9 @@ import {
   daysOfMonth,
   monthParam,
   weekday,
-  type DayState,
   type MonthNumbers,
 } from "@/lib/stats";
+import { LEGEND, STATE_LABEL, STATE_STYLE } from "@/components/day-states";
 import { TYPE_ICON } from "@/components/type-icon";
 import {
   CONTENT_TYPE_LABEL,
@@ -33,32 +33,6 @@ import {
   type Post,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-const STATE_STYLE: Record<DayState, string> = {
-  reel: "bg-emerald-500 text-white",
-  other: "bg-sky-500 text-white",
-  "in-progress": "bg-amber-300 text-amber-950",
-  idea: "bg-violet-100 text-violet-900 dark:bg-violet-950 dark:text-violet-200",
-  skipped: "bg-zinc-300 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200",
-  missed: "bg-red-500 text-white",
-  rescheduled: "bg-slate-400 text-white",
-  due: "bg-background ring-2 ring-inset ring-primary text-foreground",
-  empty: "bg-muted/50 text-foreground",
-};
-
-const STATE_LABEL: Record<DayState, string> = {
-  reel: "Reel posted",
-  other: "Posted, no reel",
-  "in-progress": "In progress",
-  idea: "Idea",
-  skipped: "Skipped",
-  missed: "Missed",
-  rescheduled: "Rescheduled",
-  due: "Due today",
-  empty: "Nothing yet",
-};
-
-const LEGEND: DayState[] = ["reel", "other", "in-progress", "idea", "skipped", "missed", "rescheduled", "due"];
 
 type Props =
   | { empty: true; today: ISODate; month: ISODate; view: "grid" | "list" }

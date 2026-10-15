@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { BandSkeleton, ListSkeleton } from "@/components/skeletons";
 import { listBrands, listMonthTargets } from "@/lib/db/brands";
 import { isDbConfigured } from "@/lib/db/client";
+import { requireUnlocked } from "@/lib/lock";
 import { listFestivals } from "@/lib/db/festivals";
 import { listPostsBetween, listReschedulesFor } from "@/lib/db/posts";
 import { todayIST } from "@/lib/ist";
@@ -32,6 +33,7 @@ export default function CalendarPage({ searchParams }: PageProps<"/calendar">) {
 async function CalendarContent({ searchParams }: Pick<PageProps<"/calendar">, "searchParams">) {
   await connection();
   if (!isDbConfigured()) return <ConnectNotice />;
+  await requireUnlocked();
 
   const params = await searchParams;
   const today = todayIST();

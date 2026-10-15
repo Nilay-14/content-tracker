@@ -2,23 +2,26 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { Archive, ArrowDown, ArrowUp, Plus, Sparkles, Target, Trash2, X } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, Copy, MessageCircle, Plus, Share2, Sparkles, Target, Trash2, X } from "lucide-react";
 import {
   addStarterBrands,
   archiveBrand,
+  createShareLink,
   deleteBrand,
   moveBrand,
   removeMonthTarget,
+  removeShareLink,
   saveBrand,
   setMonthTarget,
   type BrandForm,
 } from "@/app/actions/brands";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { toast } from "@/components/toaster";
 import { useRunAction } from "@/components/use-run-action";
 import { useSheet } from "@/components/use-sheet";
 import { describeDays, WeekdayPicker } from "@/components/weekday-picker";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fromISODate, monthStartISO, type ISODate } from "@/lib/ist";
@@ -285,6 +288,8 @@ function BrandEditor({
         <>
           <MonthTargets brand={brand} targets={targets} today={today} />
 
+          <ShareLinkBox brand={brand} />
+
           <div className="space-y-2 border-t pt-4">
             <Button
               variant="outline"
@@ -330,6 +335,85 @@ function BrandEditor({
             }
           />
         </>
+      )}
+    </div>
+  );
+}
+
+/** A read-only link for the brand's owner: create, copy, send, replace or turn off. */
+function ShareLinkBox({ brand }: { brand: Brand }) {
+  const [token, setToken] = useState(brand.share_token ?? null);
+  const { pending, run } = useRunAction();
+  const url = token && typeof window !== "undefined" ? `${window.location.origin}/share/${token}` : "";
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast("Link copied");
+    } catch {
+      toast("Couldn't copy on this device", "error");
+    }
+  }
+
+  return (
+    <div className="space-y-3 border-t pt-4">
+      <div className="flex items-center gap-2">
+        <Share2 className="size-4 text-muted-foreground" />
+        <h3 className="font-medium">Share link for the brand owner</h3>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        A read-only page with {brand.name}&apos;s calendar and numbers. It works without your PIN, and nobody can change
+        anything from it.
+      </p>
+      {token ? (
+        <>
+          <Input readOnly value={url} aria-label="Share link" onFocus={(e) => e.target.select()} />
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="button" variant="outline" onClick={copy}>
+              <Copy /> Copy link
+            </Button>
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(`${brand.name} content calendar: ${url}`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(buttonVariants(), "bg-[#25D366] text-white hover:bg-[#1ebe5b]")}
+            >
+              <MessageCircle /> WhatsApp
+            </a>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={pending}
+              onClick={() =>
+                run(() => createShareLink(brand.id), {
+                  success: "New link made. The old one no longer works",
+                  onSuccess: (t) => setToken(t),
+                })
+              }
+            >
+              New link
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-destructive"
+              disabled={pending}
+              onClick={() => run(() => removeShareLink(brand.id), { success: "Link turned off", onSuccess: () => setToken(null) })}
+            >
+              Turn off
+            </Button>
+          </div>
+        </>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          disabled={pending}
+          onClick={() => run(() => createShareLink(brand.id), { success: "Share link made", onSuccess: (t) => setToken(t) })}
+        >
+          <Share2 /> Make a share link
+        </Button>
       )}
     </div>
   );

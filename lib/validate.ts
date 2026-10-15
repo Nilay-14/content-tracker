@@ -1,3 +1,4 @@
+import { assertUnlocked } from "@/lib/lock";
 import { isValidISODate } from "@/lib/stats";
 import {
   CONTENT_TYPES,
@@ -115,9 +116,13 @@ export function postInput(raw: Partial<Record<keyof PostInput, unknown>>): PostI
   return input;
 }
 
-/** Runs an action body and turns any thrown error into `{ ok: false }`. */
+/**
+ * Runs an action body and turns any thrown error into `{ ok: false }`.
+ * Refuses when the app is PIN-locked on this device.
+ */
 export async function attempt<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
   try {
+    await assertUnlocked();
     return { ok: true, data: await fn() };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Something went wrong.";

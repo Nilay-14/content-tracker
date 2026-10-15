@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { refresh } from "next/cache";
 import * as brands from "@/lib/db/brands";
 import { monthStartISO } from "@/lib/ist";
@@ -91,6 +92,24 @@ export async function setMonthTarget(
 
 export async function removeMonthTarget(id: string): Promise<ActionResult> {
   const result = await attempt(() => brands.deleteMonthTarget(uuid(id, "Target")));
+  refresh();
+  return result;
+}
+
+/** Makes a new read-only share link for a brand (any old link stops working). */
+export async function createShareLink(brandId: string): Promise<ActionResult<string>> {
+  const result = await attempt(async () => {
+    const token = randomBytes(16).toString("base64url");
+    await brands.setShareToken(uuid(brandId, "Brand"), token);
+    return token;
+  });
+  refresh();
+  return result;
+}
+
+/** Turns a brand's share link off. */
+export async function removeShareLink(brandId: string): Promise<ActionResult> {
+  const result = await attempt(() => brands.setShareToken(uuid(brandId, "Brand"), null));
   refresh();
   return result;
 }

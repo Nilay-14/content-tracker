@@ -5,11 +5,13 @@ import { PageHeader } from "@/components/page-header";
 import { ListSkeleton } from "@/components/skeletons";
 import { countPostsByBrand, listBrands, listMonthTargets } from "@/lib/db/brands";
 import { isDbConfigured } from "@/lib/db/client";
+import { hasPin, requireUnlocked } from "@/lib/lock";
 import { listFestivals } from "@/lib/db/festivals";
 import { todayIST } from "@/lib/ist";
 import { BrandsSection } from "./brands-section";
 import { FestivalsSection } from "./festivals-section";
 import { ImportSection } from "./import-section";
+import { PinSection } from "./pin-section";
 
 export default function SetupPage() {
   return (
@@ -25,11 +27,13 @@ export default function SetupPage() {
 async function SetupContent() {
   await connection();
   if (!isDbConfigured()) return <ConnectNotice />;
+  await requireUnlocked();
 
-  const [brands, festivals, targets] = await Promise.all([
+  const [brands, festivals, targets, pinOn] = await Promise.all([
     listBrands(),
     listFestivals(),
     listMonthTargets(),
+    hasPin(),
   ]);
   const postCounts = await countPostsByBrand(brands.map((b) => b.id));
   const today = todayIST();
@@ -39,6 +43,7 @@ async function SetupContent() {
       <BrandsSection brands={brands} postCounts={postCounts} targets={targets} today={today} />
       <FestivalsSection festivals={festivals} today={today} />
       <ImportSection brands={brands.filter((b) => b.is_active)} festivals={festivals} />
+      <PinSection hasPin={pinOn} />
     </div>
   );
 }
