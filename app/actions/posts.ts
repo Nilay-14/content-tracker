@@ -16,8 +16,29 @@ export async function savePost(id: string | null, raw: PostInput): Promise<Actio
   return result;
 }
 
-export async function deletePost(id: string): Promise<ActionResult> {
+export async function deletePost(id: string): Promise<ActionResult<Post>> {
   const result = await attempt(() => posts.deletePost(uuid(id, "Entry")));
+  refresh();
+  return result;
+}
+
+/** Undo a delete: saves the entry again, with the same id and results. */
+export async function restorePost(post: Post): Promise<ActionResult<Post>> {
+  const result = await attempt(async () => {
+    const input = postInput({
+      ...post,
+      // Results are copied back as they were.
+      views: post.views,
+      likes: post.likes,
+      comments: post.comments,
+      shares: post.shares,
+      saves: post.saves,
+      followers_gained: post.followers_gained,
+    });
+    if (post.metrics_updated_at) input.metrics_updated_at = post.metrics_updated_at;
+    else delete input.metrics_updated_at;
+    return posts.restorePost(uuid(post.id, "Entry"), input);
+  });
   refresh();
   return result;
 }

@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { differenceInCalendarDays } from "date-fns";
 import { ChartNoAxesColumn, ChevronDown, History, Link2, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import { saveFestival } from "@/app/actions/festivals";
-import { deletePost, savePost } from "@/app/actions/posts";
+import { deletePost, restorePost, savePost } from "@/app/actions/posts";
 import { ChoiceChips } from "@/components/choice-chips";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { NativeSelect } from "@/components/native-select";
@@ -629,7 +629,18 @@ export function PostForm({
           title="Delete this entry?"
           description={`“${post.title}” will be removed. This can't be undone.`}
           onConfirm={() =>
-            run(() => deletePost(post.id), { success: "Entry deleted", onSuccess: onDeleted })
+            run(() => deletePost(post.id), {
+              onSuccess: (deleted) => {
+                toast("Entry deleted", "success", {
+                  label: "Undo",
+                  onClick: () =>
+                    restorePost(deleted).then((r) =>
+                      r.ok ? toast("Entry restored") : toast(r.error, "error"),
+                    ),
+                });
+                onDeleted?.();
+              },
+            })
           }
         />
       )}

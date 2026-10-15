@@ -149,7 +149,16 @@ export async function updatePost(id: string, input: PostInput): Promise<Post> {
   return data;
 }
 
-export async function deletePost(id: string) {
-  const { error } = await db().from("posts").delete().eq("id", id);
+/** Deletes an entry and returns it, so it can be put back (Undo). */
+export async function deletePost(id: string): Promise<Post> {
+  const { data, error } = await db().from("posts").delete().eq("id", id).select().single();
   if (error) fail("Deleting entry", error);
+  return data;
+}
+
+/** Puts a deleted entry back with its old id (Undo). */
+export async function restorePost(id: string, input: PostInput): Promise<Post> {
+  const { data, error } = await db().from("posts").insert({ id, ...input }).select().single();
+  if (error) fail("Restoring entry", error);
+  return data;
 }

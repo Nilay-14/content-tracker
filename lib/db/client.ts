@@ -19,7 +19,7 @@ type Table<Row, Insert> = {
 type BrandInsert = Partial<Omit<Brand, "id" | "created_at">> & { name: string };
 type TargetInsert = Omit<BrandMonthTarget, "id">;
 type FestivalInsert = Partial<Omit<Festival, "id" | "created_at">> & { name: string };
-type PostInsert = Partial<Omit<Post, "id" | "created_at" | "updated_at">> & {
+type PostInsert = Partial<Omit<Post, "created_at" | "updated_at">> & {
   brand_id: string;
   title: string;
 };
