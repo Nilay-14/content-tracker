@@ -23,6 +23,7 @@ import {
   monthEndISO,
   monthParam,
   topPosts,
+  typeCount,
   type MonthNumbers,
 } from "@/lib/stats";
 import {
@@ -174,7 +175,12 @@ export function MasterView({
                   <td className="px-2 py-2.5 text-right font-semibold">{numbers.posted}</td>
                   {types.map((t) => (
                     <td key={t} className="px-2 py-2.5 text-right">
-                      {numbers.byType[t]}
+                      {typeCount(numbers, t)}
+                      {t === "carousel" && numbers.carouselPages > 0 && (
+                        <span className="block text-[11px] font-normal text-muted-foreground">
+                          {numbers.carouselPages} pages
+                        </span>
+                      )}
                     </td>
                   ))}
                   <td className="px-2 py-2.5 text-right">
@@ -566,8 +572,16 @@ function SummaryCard({
       <div className="mt-3 grid grid-cols-3 gap-1.5 text-center text-xs">
         {types.map((t) => (
           <div key={t} className="rounded-lg bg-muted/60 py-1.5">
-            <div className="text-base font-semibold tabular-nums">{numbers.byType[t]}</div>
-            <div className="text-muted-foreground">{CONTENT_TYPE_PLURAL[t]}</div>
+            <div className="text-base font-semibold tabular-nums">{typeCount(numbers, t)}</div>
+            <div className="text-muted-foreground">
+              {CONTENT_TYPE_PLURAL[t]}
+              {t === "carousel" && numbers.carouselPages > 0 && (
+                <span className="block text-[11px]">{numbers.carouselPages} pages</span>
+              )}
+              {t === "static" && numbers.carouselPages > 0 && (
+                <span className="block text-[11px]">incl. pages</span>
+              )}
+            </div>
           </div>
         ))}
         <button

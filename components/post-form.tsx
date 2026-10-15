@@ -36,6 +36,7 @@ import {
 } from "@/lib/types";
 
 const TYPE_OPTIONS = CONTENT_TYPES.map((t) => ({ value: t, label: CONTENT_TYPE_LABEL[t] }));
+const PAGE_PRESETS = [3, 5, 7, 10] as const;
 const STATUS_OPTIONS = POST_STATUSES.map((s) => ({ value: s, label: POST_STATUS_LABEL[s] }));
 
 export function defaultStatus(date: ISODate | null, today: ISODate): PostStatus {
@@ -65,6 +66,7 @@ type FormState = {
   post_date: string;
   title: string;
   content_type: ContentType;
+  slide_count: string;
   status: PostStatus;
   skip_reason: string;
   festivalOn: boolean;
@@ -84,6 +86,7 @@ function initialState(
     post_date: post ? (post.post_date ?? "") : (defaults.post_date ?? ""),
     title: post?.title ?? "",
     content_type: post?.content_type ?? "reel",
+    slide_count: post?.slide_count?.toString() ?? "",
     status: post?.status ?? defaults.status ?? defaultStatus(defaults.post_date, today),
     skip_reason: post?.skip_reason ?? "",
     festivalOn: Boolean(post?.festival_id),
@@ -206,6 +209,8 @@ export function PostForm({
       post_date: postDate || null,
       title: form.title,
       content_type: form.content_type,
+      slide_count:
+        form.content_type === "carousel" && form.slide_count.trim() ? Number(form.slide_count) : null,
       status: form.status,
       skip_reason: form.status === "skipped" ? form.skip_reason : null,
       festival_id: form.festivalOn && form.festival_id ? form.festival_id : null,
@@ -332,6 +337,45 @@ export function PostForm({
           onChange={(v) => set("content_type", v)}
         />
       </div>
+
+      {form.content_type === "carousel" && (
+        <div className="space-y-1.5">
+          <Label htmlFor={`${idPrefix}-pages`}>Pages in this carousel</Label>
+          <div className="flex flex-wrap items-center gap-2">
+            {PAGE_PRESETS.map((n) => {
+              const active = form.slide_count === String(n);
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => set("slide_count", active ? "" : String(n))}
+                  className={
+                    active
+                      ? "h-11 min-w-11 rounded-full border border-primary bg-primary px-3 text-sm font-medium text-primary-foreground"
+                      : "h-11 min-w-11 rounded-full border bg-background px-3 text-sm font-medium hover:bg-muted"
+                  }
+                >
+                  {n}
+                </button>
+              );
+            })}
+            <Input
+              id={`${idPrefix}-pages`}
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={20}
+              step={1}
+              className="w-24"
+              placeholder="Other"
+              value={form.slide_count}
+              onChange={(e) => set("slide_count", e.target.value)}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">Each page also counts as a static in the monthly numbers.</p>
+        </div>
+      )}
 
       <div className="space-y-3 rounded-xl border bg-muted/30 p-3">
         <label className="flex min-h-8 items-center justify-between gap-3">

@@ -258,7 +258,10 @@ function BrandCalendar({
                   </td>
                   <td className="py-2.5 pr-2">{WEEKDAY_SHORT[weekday(p.post_date!)]}</td>
                   <td className="py-2.5 pr-2 font-medium">{p.title}</td>
-                  <td className="py-2.5 pr-2">{CONTENT_TYPE_LABEL[p.content_type]}</td>
+                  <td className="py-2.5 pr-2">
+                    {CONTENT_TYPE_LABEL[p.content_type]}
+                    {p.content_type === "carousel" && p.slide_count ? ` (${p.slide_count})` : ""}
+                  </td>
                   <td className="py-2.5 pr-2">
                     {p.festival_id ? `🎉 ${festivalById.get(p.festival_id)?.name ?? ""}` : ""}
                   </td>

@@ -42,6 +42,14 @@ export function optionalCount(value: unknown, label: string): number | null {
   return wholeNumber(value, label, 2_000_000_000);
 }
 
+/** Pages in a carousel: empty, or 1 to 20 (Instagram's limit). */
+export function optionalPages(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n = wholeNumber(value, "Pages", 20);
+  if (n < 1) throw new InputError("Pages must be from 1 to 20.");
+  return n;
+}
+
 export function optionalDate(value: unknown, label: string): string | null {
   if (value === null || value === undefined || value === "") return null;
   if (typeof value !== "string" || !isValidISODate(value)) {
@@ -90,6 +98,7 @@ export function postInput(raw: Partial<Record<keyof PostInput, unknown>>): PostI
     post_date,
     title: requiredText(raw.title, "Content / product", 300),
     content_type,
+    slide_count: content_type === "carousel" ? optionalPages(raw.slide_count) : null,
     status,
     skip_reason: status === "skipped" ? text(raw.skip_reason, "Reason") : null,
     festival_id: optionalUuid(raw.festival_id, "Festival"),

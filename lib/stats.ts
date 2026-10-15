@@ -130,6 +130,8 @@ export type MonthNumbers = {
   target: number;
   posted: number;
   byType: Record<ContentType, number>;
+  /** Pages across all posted carousels. They also count as statics (see `typeCount`). */
+  carouselPages: number;
   festival: number;
   pending: number;
   /** Posted ÷ Target × 100, or null when the target is 0. */
@@ -145,6 +147,7 @@ function finish(
   target: number,
   posted: number,
   byType: Record<ContentType, number>,
+  carouselPages: number,
   festival: number,
   month: ISODate,
   today: ISODate,
@@ -153,6 +156,7 @@ function finish(
     target,
     posted,
     byType,
+    carouselPages,
     festival,
     pending: Math.max(target - posted, 0),
     pct: target > 0 ? (posted / target) * 100 : null,
@@ -174,15 +178,17 @@ export function monthNumbers(
   const end = monthEndISO(month);
   const byType = emptyByType();
   let posted = 0;
+  let carouselPages = 0;
   let festival = 0;
   for (const p of posts) {
     if (p.brand_id !== brand.id || p.status !== "posted") continue;
     if (!p.post_date || p.post_date < month || p.post_date > end) continue;
     posted += 1;
     byType[p.content_type] += 1;
+    if (p.content_type === "carousel") carouselPages += p.slide_count ?? 0;
     if (p.festival_id) festival += 1;
   }
-  return finish(targetFor(brand, month, overrides), posted, byType, festival, month, today);
+  return finish(targetFor(brand, month, overrides), posted, byType, carouselPages, festival, month, today);
 }
 
 /** The Total row: sums across brands, with % and pace worked out from the sums. */
@@ -190,14 +196,25 @@ export function totalNumbers(rows: MonthNumbers[], month: ISODate, today: ISODat
   const byType = emptyByType();
   let target = 0;
   let posted = 0;
+  let carouselPages = 0;
   let festival = 0;
   for (const r of rows) {
     target += r.target;
     posted += r.posted;
+    carouselPages += r.carouselPages;
     festival += r.festival;
     for (const t of CONTENT_TYPES) byType[t] += r.byType[t];
   }
-  return finish(target, posted, byType, festival, month, today);
+  return finish(target, posted, byType, carouselPages, festival, month, today);
+}
+
+/**
+ * The number shown for a type. Statics = single static posts plus every page
+ * of the posted carousels (5 carousels of 7 pages and 3 statics → 38 statics).
+ * Posted, Pending and % still count entries, not pages.
+ */
+export function typeCount(n: MonthNumbers, type: ContentType): number {
+  return type === "static" ? n.byType.static + n.carouselPages : n.byType[type];
 }
 
 export function formatPct(pct: number | null): string {

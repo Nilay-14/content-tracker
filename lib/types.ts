@@ -100,6 +100,8 @@ export type Post = {
   post_date: ISODate | null;
   title: string;
   content_type: ContentType;
+  /** Pages (images) in a carousel; null for other types or when not filled in. */
+  slide_count: number | null;
   platform: string;
   status: PostStatus;
   skip_reason: string | null;
@@ -125,6 +127,7 @@ export type PostInput = Partial<Record<Metric, number | null>> & {
   post_date: ISODate | null;
   title: string;
   content_type: ContentType;
+  slide_count: number | null;
   status: PostStatus;
   skip_reason: string | null;
   festival_id: string | null;

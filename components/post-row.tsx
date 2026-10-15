@@ -49,6 +49,7 @@ export function PostRow({
             </span>
           )}
           {showDate && <span>{CONTENT_TYPE_LABEL[post.content_type]}</span>}
+          {post.content_type === "carousel" && post.slide_count && <span>{post.slide_count} pages</span>}
           {festival && <span>🎉 {festival.name}</span>}
           {post.rescheduled_from && <span>↪ for {formatShortDate(post.rescheduled_from)}</span>}
           {post.people.length > 0 && <span className="truncate">👤 {post.people.join(", ")}</span>}

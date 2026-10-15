@@ -93,6 +93,7 @@ A personal web app for tracking daily social media content across multiple brand
 | post_date | date | may be null only when status = `idea` (check constraint) |
 | title | text not null | content or product, e.g. "Dumpling squishy" or "Happy Diwali poster" |
 | content_type | content_type | default `reel` |
+| slide_count | smallint null | pages (images) in a carousel, 1–20; null for other types |
 | platform | text | default `instagram` |
 | status | post_status | default `posted` |
 | skip_reason | text | used when status = `skipped` |
@@ -114,6 +115,7 @@ A personal web app for tracking daily social media content across multiple brand
 - **Target** for a month = the `brand_month_targets` value if one exists; otherwise `brands.monthly_target`.
 - **Posted** = the number of entries with status `posted` whose `post_date` is in that month.
 - **By type** = posted entries counted per `content_type` (Reels, Statics, Carousels, Stories, Other).
+- **Carousel pages** = the sum of `slide_count` over posted carousels. **Statics** shows single static posts **plus** carousel pages (3 statics + 5 carousels of 7 pages → Statics 38, Carousels 5 · 35 pages). Posted, Pending and % still count entries, not pages.
 - **Festival posts** = posted entries with `festival_id` set. They are also counted in their type: a Diwali poster counts as 1 Static **and** 1 Festival post.
 - **Pending** = max(Target − Posted, 0).
 - **Completion %** = Posted ÷ Target, shown to 1 decimal place. Show "—" if the target is 0.
