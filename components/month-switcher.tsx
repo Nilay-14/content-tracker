@@ -34,8 +34,8 @@ export function MonthSwitcher({
       >
         <ChevronLeft />
       </Link>
-      <div className={`${ON_BAND.box} min-w-0 flex-1`}>
-        {format(fromISODate(month), "MMMM yyyy")}
+      <div className={`${ON_BAND.box} min-w-0 flex-1 px-3`}>
+        <span className="truncate">{format(fromISODate(month), month !== current ? "MMM yyyy" : "MMMM yyyy")}</span>
       </div>
       <Link
         href={href(shiftMonth(month, 1))}

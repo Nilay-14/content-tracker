@@ -292,5 +292,5 @@ Ganesh Chaturthi, Navratri, Dussehra, Karva Chauth, Dhanteras, Diwali, Bhai Dooj
 - [x] 9 Repeat warning + autocomplete
 - [x] 10 Performance results
 - [x] 11 Monthly report export (printable PDF page; Excel skipped by the owner's choice)
-- [ ] 12 Import September sheet
+- [x] 12 Import September sheet
 - [x] 13 Idea bank
