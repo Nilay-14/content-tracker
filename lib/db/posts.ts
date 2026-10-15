@@ -136,6 +136,13 @@ export async function createPost(input: PostInput): Promise<Post> {
   return data;
 }
 
+/** Saves many entries in one go (the sheet import). */
+export async function createPosts(inputs: PostInput[]): Promise<number> {
+  const { error, count } = await db().from("posts").insert(inputs, { count: "exact" });
+  if (error) fail("Saving imported entries", error);
+  return count ?? inputs.length;
+}
+
 export async function updatePost(id: string, input: PostInput): Promise<Post> {
   const { data, error } = await db().from("posts").update(input).eq("id", id).select().single();
   if (error) fail("Saving entry", error);

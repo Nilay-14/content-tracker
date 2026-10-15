@@ -9,6 +9,7 @@ import { listFestivals } from "@/lib/db/festivals";
 import { todayIST } from "@/lib/ist";
 import { BrandsSection } from "./brands-section";
 import { FestivalsSection } from "./festivals-section";
+import { ImportSection } from "./import-section";
 
 export default function SetupPage() {
   return (
@@ -37,6 +38,7 @@ async function SetupContent() {
     <div className="space-y-8">
       <BrandsSection brands={brands} postCounts={postCounts} targets={targets} today={today} />
       <FestivalsSection festivals={festivals} today={today} />
+      <ImportSection brands={brands.filter((b) => b.is_active)} festivals={festivals} />
     </div>
   );
 }
