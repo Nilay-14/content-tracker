@@ -2,7 +2,9 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { CalendarClock, ChartNoAxesColumn, FileText, Search, Sparkles } from "lucide-react";
+import { CalendarClock, ChartNoAxesColumn, Copy, FileText, MessageCircle, Search, Sparkles } from "lucide-react";
+import { toast } from "@/components/toaster";
+import { whatsappSummary } from "@/lib/summary";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { PaceBadge, ProgressBar } from "@/components/badges";
 import { MonthSwitcher } from "@/components/month-switcher";
@@ -209,6 +211,15 @@ export function MasterView({
         </table>
       </div>
 
+      <ShareSummary
+        text={whatsappSummary(
+          month,
+          today,
+          rows.map((r) => ({ name: brandById.get(r.brandId)!.name, numbers: r.numbers })),
+          total,
+        )}
+      />
+
       <Link
         href={`/report?${new URLSearchParams({ month: monthParam(month) })}`}
         className={cn(buttonVariants({ variant: "outline" }), "w-full")}
@@ -304,6 +315,34 @@ export function MasterView({
           />
         )}
       </BottomSheet>
+    </div>
+  );
+}
+
+/** Copy the month's summary, or open WhatsApp with it typed in. */
+function ShareSummary({ text }: { text: string }) {
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast("Summary copied. Paste it in WhatsApp");
+    } catch {
+      toast("Couldn't copy on this device. Use the WhatsApp button", "error");
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <Button variant="outline" onClick={copy}>
+        <Copy /> Copy summary
+      </Button>
+      <a
+        href={`https://wa.me/?text=${encodeURIComponent(text)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(buttonVariants(), "bg-[#25D366] text-white hover:bg-[#1ebe5b]")}
+      >
+        <MessageCircle /> WhatsApp
+      </a>
     </div>
   );
 }
