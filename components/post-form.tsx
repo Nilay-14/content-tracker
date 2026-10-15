@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { differenceInCalendarDays } from "date-fns";
-import { Link2, Plus, Trash2, X } from "lucide-react";
+import { History, Link2, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import { saveFestival } from "@/app/actions/festivals";
 import { deletePost, savePost } from "@/app/actions/posts";
 import { ChoiceChips } from "@/components/choice-chips";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { NativeSelect } from "@/components/native-select";
 import { toast } from "@/components/toaster";
+import { useEntryHints } from "@/components/use-entry-hints";
 import { useRunAction } from "@/components/use-run-action";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { formatShortDate, fromISODate, type ISODate } from "@/lib/ist";
+import { peopleSuggestions, repeatWarning, titleSuggestions } from "@/lib/suggest";
 import {
   CONTENT_TYPE_LABEL,
   CONTENT_TYPES,
@@ -123,6 +125,10 @@ export function PostForm({
   const [newFestival, setNewFestival] = useState({ name: "", date: "" });
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { pending, run } = useRunAction();
+  // Which text box is focused, so its suggestions show. Hidden a moment after
+  // blur, so a tap on a suggestion still lands.
+  const [focus, setFocus] = useState<"title" | "people" | null>(null);
+  const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // When brand and date aren't shown, they come from the page (brand chips, date bar).
   const brandId = showBrandAndDate ? form.brand_id : defaults.brand_id;
@@ -130,6 +136,30 @@ export function PostForm({
   const around = postDate || today;
   const activeFestivals = festivals.filter((f) => f.is_active || f.id === form.festival_id);
   const pickerFestivals = sortFestivalsForPicker(activeFestivals, around);
+  const { hints, refresh: refreshHints } = useEntryHints(brandId);
+  const titleHints = focus === "title" && hints ? titleSuggestions(hints.history, form.title) : [];
+  const peopleHints =
+    focus === "people" && hints ? peopleSuggestions(hints.people, peopleDraft, form.people) : [];
+  const repeat = hints ? repeatWarning(hints.history, form.title, around, post?.id) : null;
+
+  function focusOn(field: "title" | "people") {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    setFocus(field);
+  }
+
+  function blurLater(then?: () => void) {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    blurTimer.current = setTimeout(() => {
+      setFocus(null);
+      then?.();
+    }, 150);
+  }
+
+  function pickSuggestion(apply: () => void) {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    setFocus(null);
+    apply();
+  }
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -183,6 +213,7 @@ export function PostForm({
           setForm(initialState(null, { brand_id: brandId, post_date: postDate || null }, today));
           setPeopleDraft("");
         }
+        refreshHints();
         onSaved?.(saved);
       },
     });
@@ -248,10 +279,35 @@ export function PostForm({
           id={`${idPrefix}-title`}
           value={form.title}
           onChange={(e) => set("title", e.target.value)}
+          onFocus={() => focusOn("title")}
+          onBlur={() => blurLater()}
           placeholder="e.g. Dumpling squishy"
           autoComplete="off"
           enterKeyHint="done"
         />
+        {titleHints.length > 0 && (
+          <div className="divide-y overflow-hidden rounded-xl border bg-card shadow-sm" aria-label="Earlier titles">
+            {titleHints.map((t) => (
+              <button
+                key={t}
+                type="button"
+                className="flex h-11 w-full items-center gap-2 px-3 text-left text-sm hover:bg-muted"
+                onClick={() => pickSuggestion(() => set("title", t))}
+              >
+                <History className="size-4 shrink-0 text-muted-foreground" />
+                <span className="truncate">{t}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {repeat && (
+          <p className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/60 dark:text-amber-200">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+            <span>
+              {repeat}. <span className="opacity-80">You can still save it.</span>
+            </span>
+          </p>
+        )}
       </div>
 
       <div className="space-y-1.5">
@@ -403,10 +459,28 @@ export function PostForm({
               addPerson(peopleDraft);
             }
           }}
-          onBlur={() => addPerson(peopleDraft)}
+          onFocus={() => focusOn("people")}
+          onBlur={() => {
+            const draft = peopleDraft;
+            blurLater(() => addPerson(draft));
+          }}
           placeholder="Type a name, then Enter"
           autoComplete="off"
         />
+        {peopleHints.length > 0 && (
+          <div className="flex flex-wrap gap-1.5" aria-label="Earlier people">
+            {peopleHints.map((p) => (
+              <button
+                key={p}
+                type="button"
+                className="inline-flex h-11 items-center gap-1 rounded-full border border-dashed bg-background px-3 text-sm hover:bg-muted"
+                onClick={() => pickSuggestion(() => addPerson(p))}
+              >
+                <Plus className="size-3.5" /> {p}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="space-y-1.5">

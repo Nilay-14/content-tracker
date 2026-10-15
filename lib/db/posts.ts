@@ -1,6 +1,7 @@
 import "server-only";
 import { db, fail } from "@/lib/db/client";
 import type { ISODate } from "@/lib/ist";
+import type { HistoryRow } from "@/lib/suggest";
 import type { Post, PostInput } from "@/lib/types";
 
 /** All entries dated `date`, for every brand, oldest first. */
@@ -49,6 +50,41 @@ export async function listReschedulesFor(
   const { data, error } = await query;
   if (error) fail("Loading rescheduled entries", error);
   return data;
+}
+
+/** A brand's entries since `since` (plus undated ideas), newest first, for typing hints. */
+export async function listBrandHistory(brandId: string, since: ISODate): Promise<HistoryRow[]> {
+  const { data, error } = await db()
+    .from("posts")
+    .select("id, title, post_date, status")
+    .eq("brand_id", brandId)
+    .or(`post_date.gte.${since},post_date.is.null`)
+    .order("post_date", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(2000);
+  if (error) fail("Loading earlier entries", error);
+  return data;
+}
+
+/** Everyone featured in any entry, most used first. */
+export async function listPeople(): Promise<string[]> {
+  const { data, error } = await db()
+    .from("posts")
+    .select("people")
+    .not("people", "eq", "{}")
+    .order("created_at", { ascending: false })
+    .limit(3000);
+  if (error) fail("Loading people", error);
+  const counts = new Map<string, { name: string; n: number }>();
+  for (const row of data) {
+    for (const name of row.people) {
+      const key = name.toLowerCase();
+      const entry = counts.get(key) ?? { name, n: 0 };
+      entry.n += 1;
+      counts.set(key, entry);
+    }
+  }
+  return [...counts.values()].sort((a, b) => b.n - a.n).map((e) => e.name);
 }
 
 /** Entries tagged with any of these festivals and dated in the window. */
