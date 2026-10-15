@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { CalendarClock, Search, Sparkles } from "lucide-react";
+import { CalendarClock, ChartNoAxesColumn, Search, Sparkles } from "lucide-react";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { PaceBadge, ProgressBar } from "@/components/badges";
 import { MonthSwitcher } from "@/components/month-switcher";
@@ -16,7 +16,15 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { addDaysISO, formatDisplayDate, formatShortDate, type ISODate } from "@/lib/ist";
-import { formatPct, hasPreferredDays, monthEndISO, monthParam, type MonthNumbers } from "@/lib/stats";
+import {
+  formatCount,
+  formatPct,
+  hasPreferredDays,
+  monthEndISO,
+  monthParam,
+  topPosts,
+  type MonthNumbers,
+} from "@/lib/stats";
 import {
   CONTENT_TYPE_LABEL,
   CONTENT_TYPE_PLURAL,
@@ -207,6 +215,8 @@ export function MasterView({
         onEdit={editSheet.show}
       />
 
+      <TopPosts month={month} brands={active} posts={posts} onEdit={editSheet.show} />
+
       <FestivalGrid month={month} brands={active} festivals={festivals} posts={posts} />
 
       <CombinedLog
@@ -277,6 +287,70 @@ export function MasterView({
         )}
       </BottomSheet>
     </div>
+  );
+}
+
+function TopPosts({
+  month,
+  brands,
+  posts,
+  onEdit,
+}: {
+  month: ISODate;
+  brands: Brand[];
+  posts: Post[];
+  onEdit: (post: Post) => void;
+}) {
+  const lists = brands
+    .map((b) => ({ brand: b, top: topPosts(posts, b.id, month) }))
+    .filter((l) => l.top.length > 0);
+
+  return (
+    <section className="space-y-2">
+      <h2 className="text-lg font-semibold">Top 5 posts this month</h2>
+      {lists.length === 0 ? (
+        <p className="rounded-xl border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
+          Open a posted entry and tap <span className="font-medium text-foreground">Add results</span> to rank posts by
+          views here.
+        </p>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {lists.map(({ brand, top }) => (
+            <div key={brand.id} className="overflow-hidden rounded-2xl border border-t-4 bg-card" style={{ borderTopColor: brand.color }}>
+              <div className="px-3 pt-2.5 pb-1 font-semibold" style={{ color: brand.color }}>
+                {brand.name}
+              </div>
+              <ol className="divide-y">
+                {top.map((p, i) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      onClick={() => onEdit(p)}
+                      className="flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted/60"
+                    >
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold tabular-nums">
+                        {i + 1}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{p.title}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {CONTENT_TYPE_LABEL[p.content_type]} · {formatShortDate(p.post_date!)}
+                          {p.likes !== null && ` · ${formatCount(p.likes)} likes`}
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1 font-semibold tabular-nums">
+                        <ChartNoAxesColumn className="size-3.5 text-muted-foreground" />
+                        {formatCount(p.views)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

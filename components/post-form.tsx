@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { differenceInCalendarDays } from "date-fns";
-import { History, Link2, Plus, Trash2, TriangleAlert, X } from "lucide-react";
+import { ChartNoAxesColumn, ChevronDown, History, Link2, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import { saveFestival } from "@/app/actions/festivals";
 import { deletePost, savePost } from "@/app/actions/posts";
 import { ChoiceChips } from "@/components/choice-chips";
@@ -16,16 +16,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { formatShortDate, fromISODate, type ISODate } from "@/lib/ist";
+import { formatShortDate, fromISODate, todayIST, type ISODate } from "@/lib/ist";
+import { formatCount } from "@/lib/stats";
 import { peopleSuggestions, repeatWarning, titleSuggestions } from "@/lib/suggest";
 import {
   CONTENT_TYPE_LABEL,
   CONTENT_TYPES,
+  METRIC_LABEL,
+  METRICS,
   POST_STATUS_LABEL,
   POST_STATUSES,
   type Brand,
   type ContentType,
   type Festival,
+  type Metric,
   type Post,
   type PostInput,
   type PostStatus,
@@ -124,6 +128,12 @@ export function PostForm({
   const [addingFestival, setAddingFestival] = useState(false);
   const [newFestival, setNewFestival] = useState({ name: "", date: "" });
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Results (views, likes…) for an entry that's already posted.
+  const [results, setResults] = useState<Record<Metric, string>>(
+    () => Object.fromEntries(METRICS.map((m) => [m, post?.[m]?.toString() ?? ""])) as Record<Metric, string>,
+  );
+  const [resultsOpen, setResultsOpen] = useState(false);
+  const [resultsDirty, setResultsDirty] = useState(false);
   const { pending, run } = useRunAction();
   // Which text box is focused, so its suggestions show. Hidden a moment after
   // blur, so a tap on a suggestion still lands.
@@ -204,6 +214,9 @@ export function PostForm({
       notes: form.notes,
       // Not edited here, but kept so an edit never loses the link to a missed day.
       rescheduled_from: post ? post.rescheduled_from : (defaults.rescheduled_from ?? null),
+      ...(resultsDirty
+        ? Object.fromEntries(METRICS.map((m) => [m, results[m].trim() === "" ? null : Number(results[m])]))
+        : {}),
     };
     run(() => savePost(post?.id ?? null, input), {
       success: post ? "Entry updated" : "Saved",
@@ -482,6 +495,60 @@ export function PostForm({
           </div>
         )}
       </div>
+
+      {post && form.status === "posted" && (
+        <div className="rounded-xl border bg-muted/30">
+          <button
+            type="button"
+            aria-expanded={resultsOpen}
+            onClick={() => setResultsOpen((o) => !o)}
+            className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-sm"
+          >
+            <ChartNoAxesColumn className="size-4 shrink-0 text-primary" />
+            <span className="flex-1">
+              <span className="font-medium">{post.views !== null || resultsDirty ? "Results" : "Add results"}</span>
+              {post.views !== null && !resultsDirty && (
+                <span className="text-muted-foreground">
+                  {" "}
+                  · {formatCount(post.views)} views
+                  {post.likes !== null ? ` · ${formatCount(post.likes)} likes` : ""}
+                </span>
+              )}
+            </span>
+            <ChevronDown className={`size-4 shrink-0 transition-transform ${resultsOpen ? "rotate-180" : ""}`} />
+          </button>
+          {resultsOpen && (
+            <div className="space-y-2 border-t px-3 pt-3 pb-3">
+              <div className="grid grid-cols-2 gap-3">
+                {METRICS.map((m) => (
+                  <div key={m} className="space-y-1">
+                    <Label htmlFor={`${idPrefix}-${m}`} className="text-xs">
+                      {METRIC_LABEL[m]}
+                    </Label>
+                    <Input
+                      id={`${idPrefix}-${m}`}
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      step={1}
+                      value={results[m]}
+                      onChange={(e) => {
+                        setResults((r) => ({ ...r, [m]: e.target.value }));
+                        setResultsDirty(true);
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+              {post.metrics_updated_at && (
+                <p className="text-xs text-muted-foreground">
+                  Last updated {formatShortDate(todayIST(new Date(post.metrics_updated_at)))}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label htmlFor={`${idPrefix}-notes`}>Notes</Label>

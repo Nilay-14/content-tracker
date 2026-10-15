@@ -51,6 +51,19 @@ export const IN_PROGRESS_STATUSES: readonly PostStatus[] = [
   "scheduled",
 ];
 
+/** Performance results that can be added to an entry once it's posted. */
+export const METRICS = ["views", "likes", "comments", "shares", "saves", "followers_gained"] as const;
+export type Metric = (typeof METRICS)[number];
+
+export const METRIC_LABEL: Record<Metric, string> = {
+  views: "Views",
+  likes: "Likes",
+  comments: "Comments",
+  shares: "Shares",
+  saves: "Saves",
+  followers_gained: "Followers gained",
+};
+
 export const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 export type Brand = {
@@ -106,8 +119,8 @@ export type Post = {
   updated_at: string;
 };
 
-/** The fields the entry form edits. */
-export type PostInput = {
+/** The fields the entry form edits. Results are sent only when they were changed. */
+export type PostInput = Partial<Record<Metric, number | null>> & {
   brand_id: string;
   post_date: ISODate | null;
   title: string;
@@ -119,6 +132,8 @@ export type PostInput = {
   people: string[];
   notes: string | null;
   rescheduled_from?: ISODate | null;
+  /** Set by the server whenever results are saved. */
+  metrics_updated_at?: string;
 };
 
 /** What every Server Action returns, so forms can show a toast. */

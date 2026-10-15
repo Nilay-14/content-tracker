@@ -1,6 +1,8 @@
 import { isValidISODate } from "@/lib/stats";
 import {
   CONTENT_TYPES,
+  METRIC_LABEL,
+  METRICS,
   POST_STATUSES,
   type ActionResult,
   type ContentType,
@@ -32,6 +34,12 @@ export function wholeNumber(value: unknown, label: string, max = 100000): number
     throw new InputError(`${label} must be a whole number from 0 to ${max}.`);
   }
   return n;
+}
+
+/** A count that may be left empty, e.g. views. */
+export function optionalCount(value: unknown, label: string): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  return wholeNumber(value, label, 2_000_000_000);
 }
 
 export function optionalDate(value: unknown, label: string): string | null {
@@ -77,7 +85,7 @@ export function postInput(raw: Partial<Record<keyof PostInput, unknown>>): PostI
   const people = Array.isArray(raw.people)
     ? [...new Set(raw.people.map((p) => String(p).trim()).filter(Boolean))].slice(0, 30)
     : [];
-  return {
+  const input: PostInput = {
     brand_id: uuid(raw.brand_id, "Brand"),
     post_date,
     title: requiredText(raw.title, "Content / product", 300),
@@ -90,6 +98,12 @@ export function postInput(raw: Partial<Record<keyof PostInput, unknown>>): PostI
     notes: text(raw.notes, "Notes", { max: 4000 }),
     rescheduled_from: optionalDate(raw.rescheduled_from, "Rescheduled from"),
   };
+  // Results are only sent when they were edited, so other saves never wipe them.
+  if (METRICS.some((m) => m in raw)) {
+    for (const m of METRICS) input[m] = optionalCount(raw[m], METRIC_LABEL[m]);
+    input.metrics_updated_at = new Date().toISOString();
+  }
+  return input;
 }
 
 /** Runs an action body and turns any thrown error into `{ ok: false }`. */

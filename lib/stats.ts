@@ -204,6 +204,32 @@ export function formatPct(pct: number | null): string {
   return pct === null ? "—" : `${pct.toFixed(1)}%`;
 }
 
+// --- Performance results -------------------------------------------------------
+
+/** A brand's posted entries dated in `month` that have views, most views first. */
+export function topPosts(posts: Post[], brandId: string, month: ISODate, limit = 5): Post[] {
+  const end = monthEndISO(month);
+  return posts
+    .filter(
+      (p) =>
+        p.brand_id === brandId &&
+        p.status === "posted" &&
+        p.views !== null &&
+        p.post_date &&
+        p.post_date >= month &&
+        p.post_date <= end,
+    )
+    .sort((a, b) => b.views! - a.views! || (b.likes ?? 0) - (a.likes ?? 0))
+    .slice(0, limit);
+}
+
+const compact = new Intl.NumberFormat("en-IN", { notation: "compact", maximumFractionDigits: 1 });
+
+/** 1234 → "1.2K", 150000 → "1.5L". */
+export function formatCount(n: number | null): string {
+  return n === null ? "—" : compact.format(n);
+}
+
 // --- Preferred days, missed and due ------------------------------------------
 
 export function hasPreferredDays(brand: Brand): boolean {
