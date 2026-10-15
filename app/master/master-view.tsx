@@ -12,6 +12,7 @@ import { HeaderBand } from "@/components/page-header";
 import { NativeSelect } from "@/components/native-select";
 import { PostForm } from "@/components/post-form";
 import { PostRow } from "@/components/post-row";
+import { ShootList } from "@/components/shoot-list";
 import { useSheet } from "@/components/use-sheet";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -54,6 +55,7 @@ export function MasterView({
   total,
   missed,
   upcoming,
+  inProgress,
 }: {
   month: ISODate;
   today: ISODate;
@@ -66,6 +68,8 @@ export function MasterView({
   missed: Missed[];
   /** Planned and in-progress entries from today to 6 days ahead. */
   upcoming: Post[];
+  /** Every planned or in-progress entry, any date, for the shoot list. */
+  inProgress: Post[];
 }) {
   const festivalSheet = useSheet<string | "all">();
   const festivalListFor = festivalSheet.value;
@@ -243,6 +247,8 @@ export function MasterView({
         festivalById={festivalById}
         onEdit={editSheet.show}
       />
+
+      <ShootList posts={inProgress} brandById={brandById} today={today} onEdit={editSheet.show} />
 
       <TopPosts month={month} brands={active} posts={posts} onEdit={editSheet.show} />
 

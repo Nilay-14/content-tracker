@@ -6,7 +6,7 @@ import { BandSkeleton, ListSkeleton } from "@/components/skeletons";
 import { listBrands, listMonthTargets } from "@/lib/db/brands";
 import { isDbConfigured } from "@/lib/db/client";
 import { listFestivals } from "@/lib/db/festivals";
-import { listPostsBetween, listReschedulesFor } from "@/lib/db/posts";
+import { listInProgress, listPostsBetween, listReschedulesFor } from "@/lib/db/posts";
 import { addDaysISO, todayIST } from "@/lib/ist";
 import { missedDays, monthEndISO, monthNumbers, parseMonthParam, totalNumbers } from "@/lib/stats";
 import { IN_PROGRESS_STATUSES } from "@/lib/types";
@@ -40,13 +40,14 @@ async function MasterContent({ searchParams }: Pick<PageProps<"/master">, "searc
 
   const end = monthEndISO(month);
   const upcomingEnd = addDaysISO(today, 6);
-  const [brands, festivals, posts, reschedules, targets, nextWeek] = await Promise.all([
+  const [brands, festivals, posts, reschedules, targets, nextWeek, inProgress] = await Promise.all([
     listBrands(),
     listFestivals(),
     listPostsBetween(month, end),
     listReschedulesFor(month, end),
     listMonthTargets({ month }),
     listPostsBetween(today, upcomingEnd),
+    listInProgress(),
   ]);
   // Entries dated this month, plus ones elsewhere that replace a day this month.
   const relevant = [...posts, ...reschedules.filter((r) => !posts.some((p) => p.id === r.id))];
@@ -71,6 +72,7 @@ async function MasterContent({ searchParams }: Pick<PageProps<"/master">, "searc
       total={totalNumbers(rows.map((r) => r.numbers), month, today)}
       missed={missed}
       upcoming={nextWeek.filter((p) => IN_PROGRESS_STATUSES.includes(p.status))}
+      inProgress={inProgress.filter((p) => brands.some((b) => b.id === p.brand_id && b.is_active))}
     />
   );
 }

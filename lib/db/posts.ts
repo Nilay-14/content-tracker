@@ -2,7 +2,7 @@ import "server-only";
 import { db, fail } from "@/lib/db/client";
 import type { ISODate } from "@/lib/ist";
 import type { HistoryRow } from "@/lib/suggest";
-import type { Post, PostInput } from "@/lib/types";
+import type { Post, PostInput, PostStatus } from "@/lib/types";
 
 /** All entries dated `date`, for every brand, oldest first. */
 export async function listPostsOnDate(date: ISODate): Promise<Post[]> {
@@ -62,6 +62,31 @@ export async function listIdeas(): Promise<Post[]> {
     .order("created_at", { ascending: false })
     .limit(1000);
   if (error) fail("Loading ideas", error);
+  return data;
+}
+
+/** Everything being worked on (planned, shot, edited, scheduled), oldest date first. */
+export async function listInProgress(): Promise<Post[]> {
+  const { data, error } = await db()
+    .from("posts")
+    .select("*")
+    .in("status", ["planned", "shot", "edited", "scheduled"])
+    .order("post_date", { ascending: true, nullsFirst: false })
+    .order("created_at")
+    .limit(500);
+  if (error) fail("Loading the shoot list", error);
+  return data;
+}
+
+/** Moves an entry to its next stage; posting also sets the date to `date`. */
+export async function setPostStage(id: string, status: PostStatus, date?: ISODate): Promise<Post> {
+  const { data, error } = await db()
+    .from("posts")
+    .update(date ? { status, post_date: date } : { status })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) fail("Updating entry", error);
   return data;
 }
 

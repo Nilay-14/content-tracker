@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import * as posts from "@/lib/db/posts";
 import { addDaysISO, todayIST } from "@/lib/ist";
 import type { EntryHints } from "@/lib/suggest";
-import type { ActionResult, Post, PostInput } from "@/lib/types";
+import type { ActionResult, Post, PostInput, PostStatus } from "@/lib/types";
 import { attempt, InputError, optionalDate, postInput, uuid } from "@/lib/validate";
 
 export async function savePost(id: string | null, raw: PostInput): Promise<ActionResult<Post>> {
@@ -79,6 +79,24 @@ export async function scheduleIdea(id: string, date: string): Promise<ActionResu
     const day = optionalDate(date, "Date");
     if (!day) throw new InputError("Pick a date.");
     return posts.scheduleIdea(uuid(id, "Idea"), day);
+  });
+  refresh();
+  return result;
+}
+
+const NEXT_STAGE: Partial<Record<string, string>> = {
+  planned: "shot",
+  shot: "edited",
+  edited: "scheduled",
+  scheduled: "posted",
+};
+
+/** Shoot list: moves an entry one stage on. Marking it posted dates it today (IST). */
+export async function advancePost(id: string, to: string): Promise<ActionResult<Post>> {
+  const result = await attempt(async () => {
+    if (!Object.values(NEXT_STAGE).includes(to)) throw new InputError("That stage isn't allowed.");
+    const status = to as PostStatus;
+    return posts.setPostStage(uuid(id, "Entry"), status, status === "posted" ? todayIST() : undefined);
   });
   refresh();
   return result;
