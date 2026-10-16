@@ -1,9 +1,8 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { changed } from "@/lib/changed";
 import * as posts from "@/lib/db/posts";
-import { addDaysISO, todayIST } from "@/lib/ist";
-import type { EntryHints } from "@/lib/suggest";
+import { todayIST } from "@/lib/ist";
 import type { ActionResult, Post, PostInput, PostStatus } from "@/lib/types";
 import { attempt, InputError, optionalDate, postInput, uuid } from "@/lib/validate";
 
@@ -12,47 +11,44 @@ export async function savePost(id: string | null, raw: PostInput): Promise<Actio
     const input = postInput(raw);
     return id ? posts.updatePost(uuid(id, "Entry"), input) : posts.createPost(input);
   });
-  refresh();
+  changed();
   return result;
 }
 
 export async function deletePost(id: string): Promise<ActionResult<Post>> {
   const result = await attempt(() => posts.deletePost(uuid(id, "Entry")));
-  refresh();
+  changed();
   return result;
+}
+
+/** Every field of an earlier copy of an entry, checked, with its results as they were. */
+function asItWas(post: Post): PostInput {
+  const input = postInput({
+    ...post,
+    views: post.views,
+    likes: post.likes,
+    comments: post.comments,
+    shares: post.shares,
+    saves: post.saves,
+    followers_gained: post.followers_gained,
+  });
+  if (post.metrics_updated_at) input.metrics_updated_at = post.metrics_updated_at;
+  else delete input.metrics_updated_at;
+  return input;
 }
 
 /** Undo a delete: saves the entry again, with the same id and results. */
 export async function restorePost(post: Post): Promise<ActionResult<Post>> {
-  const result = await attempt(async () => {
-    const input = postInput({
-      ...post,
-      // Results are copied back as they were.
-      views: post.views,
-      likes: post.likes,
-      comments: post.comments,
-      shares: post.shares,
-      saves: post.saves,
-      followers_gained: post.followers_gained,
-    });
-    if (post.metrics_updated_at) input.metrics_updated_at = post.metrics_updated_at;
-    else delete input.metrics_updated_at;
-    return posts.restorePost(uuid(post.id, "Entry"), input);
-  });
-  refresh();
+  const result = await attempt(() => posts.restorePost(uuid(post.id, "Entry"), asItWas(post)));
+  changed();
   return result;
 }
 
-/** Earlier titles and people for the entry form's suggestions and repeat warning. */
-export async function loadEntryHints(brandId: string): Promise<ActionResult<EntryHints>> {
-  return attempt(async () => {
-    const id = uuid(brandId, "Brand");
-    const [history, people] = await Promise.all([
-      posts.listBrandHistory(id, addDaysISO(todayIST(), -365)),
-      posts.listPeople(),
-    ]);
-    return { history, people };
-  });
+/** Undo an edit, a stage move or scheduling an idea: puts the entry back as it was. */
+export async function revertPost(post: Post): Promise<ActionResult<Post>> {
+  const result = await attempt(() => posts.updatePost(uuid(post.id, "Entry"), asItWas(post)));
+  changed();
+  return result;
 }
 
 /** Saves a quick idea for a brand, with no date. */
@@ -69,7 +65,7 @@ export async function addIdea(brandId: string, title: string): Promise<ActionRes
       }),
     ),
   );
-  refresh();
+  changed();
   return result;
 }
 
@@ -80,7 +76,7 @@ export async function scheduleIdea(id: string, date: string): Promise<ActionResu
     if (!day) throw new InputError("Pick a date.");
     return posts.scheduleIdea(uuid(id, "Idea"), day);
   });
-  refresh();
+  changed();
   return result;
 }
 
@@ -98,6 +94,6 @@ export async function advancePost(id: string, to: string): Promise<ActionResult<
     const status = to as PostStatus;
     return posts.setPostStage(uuid(id, "Entry"), status, status === "posted" ? todayIST() : undefined);
   });
-  refresh();
+  changed();
   return result;
 }

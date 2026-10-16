@@ -66,7 +66,7 @@ export function FestivalsSection({ festivals, today }: { festivals: Festival[]; 
           size="icon-sm"
           aria-label={`Move ${festival.name} up`}
           disabled={pending || index === 0}
-          onClick={() => run(() => moveFestival(festival.id, -1))}
+          onClick={() => run(() => moveFestival(festival.id, -1), { success: "Moved up", undo: () => moveFestival(festival.id, 1) })}
         >
           <ArrowUp />
         </Button>
@@ -75,7 +75,7 @@ export function FestivalsSection({ festivals, today }: { festivals: Festival[]; 
           size="icon-sm"
           aria-label={`Move ${festival.name} down`}
           disabled={pending || index === group.length - 1}
-          onClick={() => run(() => moveFestival(festival.id, 1))}
+          onClick={() => run(() => moveFestival(festival.id, 1), { success: "Moved down", undo: () => moveFestival(festival.id, -1) })}
         >
           <ArrowDown />
         </Button>
@@ -159,6 +159,7 @@ function FestivalEditor({ festival, onDone }: { festival: Festival | null; onDon
           e.preventDefault();
           run(() => saveFestival(festival?.id ?? null, name, date || null), {
             success: festival ? "Festival saved" : "Festival added",
+            undo: festival ? () => saveFestival(festival.id, festival.name, festival.festival_date) : undefined,
             onSuccess: onDone,
           });
         }}
@@ -201,6 +202,7 @@ function FestivalEditor({ festival, onDone }: { festival: Festival | null; onDon
           onClick={() =>
             run(() => archiveFestival(festival.id, festival.is_active), {
               success: festival.is_active ? "Festival archived" : "Festival restored",
+              undo: () => archiveFestival(festival.id, !festival.is_active),
               onSuccess: onDone,
             })
           }

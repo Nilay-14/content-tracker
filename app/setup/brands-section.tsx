@@ -131,7 +131,7 @@ export function BrandsSection({
                     size="icon-sm"
                     aria-label={`Move ${brand.name} up`}
                     disabled={pending || index === 0}
-                    onClick={() => run(() => moveBrand(brand.id, -1))}
+                    onClick={() => run(() => moveBrand(brand.id, -1), { success: "Moved up", undo: () => moveBrand(brand.id, 1) })}
                   >
                     <ArrowUp />
                   </Button>
@@ -140,7 +140,7 @@ export function BrandsSection({
                     size="icon-sm"
                     aria-label={`Move ${brand.name} down`}
                     disabled={pending || index === group.length - 1}
-                    onClick={() => run(() => moveBrand(brand.id, 1))}
+                    onClick={() => run(() => moveBrand(brand.id, 1), { success: "Moved down", undo: () => moveBrand(brand.id, -1) })}
                   >
                     <ArrowDown />
                   </Button>
@@ -206,6 +206,16 @@ function BrandEditor({
           e.preventDefault();
           run(() => saveBrand(brand?.id ?? null, form), {
             success: brand ? "Brand saved" : "Brand added",
+            undo: brand
+              ? () =>
+                  saveBrand(brand.id, {
+                    name: brand.name,
+                    instagram_handle: brand.instagram_handle ?? "",
+                    color: brand.color,
+                    monthly_target: brand.monthly_target,
+                    preferred_days: brand.preferred_days,
+                  })
+              : undefined,
             onSuccess: onDone,
           });
         }}
@@ -298,6 +308,7 @@ function BrandEditor({
               onClick={() =>
                 run(() => archiveBrand(brand.id, brand.is_active), {
                   success: brand.is_active ? "Brand archived" : "Brand restored",
+                  undo: () => archiveBrand(brand.id, !brand.is_active),
                   onSuccess: onDone,
                 })
               }

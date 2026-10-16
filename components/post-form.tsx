@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { differenceInCalendarDays } from "date-fns";
 import { ChartNoAxesColumn, ChevronDown, History, Link2, Plus, Trash2, TriangleAlert, X } from "lucide-react";
 import { saveFestival } from "@/app/actions/festivals";
-import { deletePost, restorePost, savePost } from "@/app/actions/posts";
+import { deletePost, restorePost, revertPost, savePost } from "@/app/actions/posts";
 import { ChoiceChips } from "@/components/choice-chips";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { NativeSelect } from "@/components/native-select";
@@ -227,6 +227,8 @@ export function PostForm({
     };
     run(() => savePost(post?.id ?? null, input), {
       success: post ? "Entry updated" : "Saved",
+      // Undo a new entry by deleting it, an edit by putting the old version back.
+      undo: (saved) => (post ? revertPost(post) : deletePost(saved.id)),
       onSuccess: (saved) => {
         if (!post) {
           // Clear the form but keep the date and brand.
@@ -632,16 +634,9 @@ export function PostForm({
           description={`“${post.title}” will be removed. This can't be undone.`}
           onConfirm={() =>
             run(() => deletePost(post.id), {
-              onSuccess: (deleted) => {
-                toast("Entry deleted", "success", {
-                  label: "Undo",
-                  onClick: () =>
-                    restorePost(deleted).then((r) =>
-                      r.ok ? toast("Entry restored") : toast(r.error, "error"),
-                    ),
-                });
-                onDeleted?.();
-              },
+              success: "Entry deleted",
+              undo: (deleted) => restorePost(deleted),
+              onSuccess: () => onDeleted?.(),
             })
           }
         />

@@ -3,7 +3,9 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, LayoutGrid, List, Plus, Sparkles } from "lucide-react";
+import { ArrowLeft, CalendarClock, LayoutGrid, List, Plus, Sparkles } from "lucide-react";
+import { RescheduleForm } from "@/components/reschedule-form";
+import { ShootList } from "@/components/shoot-list";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { StatusBadge } from "@/components/badges";
 import { MonthSwitcher } from "@/components/month-switcher";
@@ -46,12 +48,15 @@ type Props =
       festivals: Festival[];
       posts: Post[];
       numbers: MonthNumbers;
+      /** This brand's planned and in-progress entries, any date, for the shoot list. */
+      inProgress: Post[];
       brandFromUrl: boolean;
     };
 
 type SheetState =
   | { kind: "day"; date: ISODate }
   | { kind: "add"; date: ISODate }
+  | { kind: "reschedule"; date: ISODate }
   | { kind: "edit"; post: Post; from: ISODate | null };
 
 export function CalendarView(props: Props) {
@@ -78,6 +83,7 @@ function BrandCalendar({
   festivals,
   posts,
   numbers,
+  inProgress,
   brandFromUrl,
 }: Extract<Props, { brand: Brand }>) {
   const router = useRouter();
@@ -288,6 +294,14 @@ function BrandCalendar({
         </div>
       )}
 
+      <ShootList
+        posts={inProgress}
+        brandById={new Map([[brand.id, brand]])}
+        today={today}
+        showBrand={false}
+        onEdit={(p) => setSheet({ kind: "edit", post: p, from: null })}
+      />
+
       <BottomSheet
         open={sheetControl.open}
         onOpenChange={sheetControl.onOpenChange}
@@ -298,7 +312,9 @@ function BrandCalendar({
               ? "Edit entry"
               : sheet.kind === "add"
                 ? `New entry · ${formatDisplayDate(sheet.date)}`
-                : formatDisplayDate(sheet.date)
+                : sheet.kind === "reschedule"
+                  ? "Reschedule"
+                  : formatDisplayDate(sheet.date)
         }
         description={
           sheet?.kind === "day" ? (
@@ -327,9 +343,33 @@ function BrandCalendar({
                 ))}
               </div>
             )}
+            {dayState(brand, sheet.date, posts, today) === "missed" && (
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full"
+                onClick={() => setSheet({ kind: "reschedule", date: sheet.date })}
+              >
+                <CalendarClock /> Reschedule to another day
+              </Button>
+            )}
             <Button size="lg" className="w-full" onClick={() => setSheet({ kind: "add", date: sheet.date })}>
               <Plus /> Add entry
             </Button>
+          </div>
+        )}
+        {sheet?.kind === "reschedule" && (
+          <div className="space-y-3">
+            <BackButton onClick={() => setSheet({ kind: "day", date: sheet.date })} />
+            <RescheduleForm
+              key={sheetControl.key}
+              brand={brand}
+              missedDate={sheet.date}
+              brands={brands}
+              festivals={festivals}
+              today={today}
+              onSaved={() => setSheet(null)}
+            />
           </div>
         )}
         {sheet?.kind === "add" && (

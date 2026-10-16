@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { changed } from "@/lib/changed";
 import * as festivals from "@/lib/db/festivals";
 import type { ActionResult, Festival } from "@/lib/types";
 import { attempt, optionalDate, requiredText, uuid } from "@/lib/validate";
@@ -21,13 +21,13 @@ export async function saveFestival(
     }
     return festivals.createFestival(fields.name, fields.festival_date);
   });
-  refresh();
+  changed();
   return result;
 }
 
 export async function archiveFestival(id: string, archived: boolean): Promise<ActionResult> {
   const result = await attempt(() => festivals.setFestivalActive(uuid(id, "Festival"), !archived));
-  refresh();
+  changed();
   return result;
 }
 
@@ -35,12 +35,12 @@ export async function moveFestival(id: string, direction: -1 | 1): Promise<Actio
   const result = await attempt(() =>
     festivals.moveFestival(uuid(id, "Festival"), direction === -1 ? -1 : 1),
   );
-  refresh();
+  changed();
   return result;
 }
 
 export async function addStarterFestivals(): Promise<ActionResult> {
   const result = await attempt(() => festivals.insertStarterFestivals());
-  refresh();
+  changed();
   return result;
 }

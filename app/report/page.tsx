@@ -56,14 +56,16 @@ const TD = "border-b px-2 py-1.5 align-top";
 async function ReportContent({ searchParams }: Pick<PageProps<"/report">, "searchParams">) {
   await connection();
   if (!isDbConfigured()) return <ConnectNotice />;
-  await requireUnlocked();
+  // The PIN check runs alongside the data queries instead of before them.
+  const unlocked = requireUnlocked();
 
   const params = await searchParams;
   const today = todayIST();
   const month = parseMonthParam(typeof params.month === "string" ? params.month : undefined, today);
   const brandParam = typeof params.brand === "string" ? params.brand : "";
 
-  const [allBrands, festivals, posts, targets] = await Promise.all([
+  const [, allBrands, festivals, posts, targets] = await Promise.all([
+    unlocked,
     listBrands(),
     listFestivals(),
     listPostsBetween(month, monthEndISO(month)),

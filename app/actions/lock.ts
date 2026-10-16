@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { changed } from "@/lib/changed";
 import { assertUnlocked, checkPin, forgetDevice, getLock, rememberDevice, savePin } from "@/lib/lock";
 import type { ActionResult } from "@/lib/types";
 
@@ -50,7 +50,7 @@ export async function setPin(newPin: string, currentPin: string | null): Promise
     const hash = await savePin(pin);
     await rememberDevice(hash!);
   });
-  refresh();
+  changed();
   return result;
 }
 
@@ -63,7 +63,7 @@ export async function removePin(currentPin: string): Promise<ActionResult> {
     await savePin(null);
     await forgetDevice();
   });
-  refresh();
+  changed();
   return result;
 }
 

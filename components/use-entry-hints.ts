@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loadEntryHints } from "@/app/actions/posts";
 import type { EntryHints } from "@/lib/suggest";
 
 // One request per brand per page visit, shared by every form on the page.
@@ -10,8 +9,9 @@ const cache = new Map<string, Promise<EntryHints | null>>();
 function fetchHints(brandId: string) {
   let pending = cache.get(brandId);
   if (!pending) {
-    pending = loadEntryHints(brandId)
-      .then((r) => (r.ok ? r.data : null))
+    // A plain fetch, not a Server Action, so it never holds up a save.
+    pending = fetch(`/api/hints?brand=${encodeURIComponent(brandId)}`, { cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<EntryHints>) : null))
       .catch(() => null);
     cache.set(brandId, pending);
   }

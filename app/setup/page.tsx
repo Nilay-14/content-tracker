@@ -27,9 +27,11 @@ export default function SetupPage() {
 async function SetupContent() {
   await connection();
   if (!isDbConfigured()) return <ConnectNotice />;
-  await requireUnlocked();
+  // The PIN check runs alongside the data queries instead of before them.
+  const unlocked = requireUnlocked();
 
-  const [brands, festivals, targets, pinOn] = await Promise.all([
+  const [, brands, festivals, targets, pinOn] = await Promise.all([
+    unlocked,
     listBrands(),
     listFestivals(),
     listMonthTargets(),

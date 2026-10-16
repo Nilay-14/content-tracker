@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { CalendarClock, ChartNoAxesColumn, Copy, FileText, MessageCircle, Search, Sparkles } from "lucide-react";
+import { ChartNoAxesColumn, ChevronLeft, ChevronRight, Copy, FileText, MessageCircle, Search, Sparkles } from "lucide-react";
 import { toast } from "@/components/toaster";
 import { whatsappSummary } from "@/lib/summary";
 import { BottomSheet } from "@/components/bottom-sheet";
@@ -12,17 +12,14 @@ import { HeaderBand } from "@/components/page-header";
 import { NativeSelect } from "@/components/native-select";
 import { PostForm } from "@/components/post-form";
 import { PostRow } from "@/components/post-row";
-import { ShootList } from "@/components/shoot-list";
 import { useSheet } from "@/components/use-sheet";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { addDaysISO, formatDisplayDate, formatShortDate, type ISODate } from "@/lib/ist";
 import {
   formatCount,
   formatPct,
-  hasPreferredDays,
   monthEndISO,
   monthParam,
   topPosts,
@@ -43,7 +40,6 @@ import {
 import { cn } from "@/lib/utils";
 
 type Row = { brandId: string; numbers: MonthNumbers };
-type Missed = { brandId: string; days: ISODate[] };
 
 export function MasterView({
   month,
@@ -53,9 +49,7 @@ export function MasterView({
   posts,
   rows,
   total,
-  missed,
   upcoming,
-  inProgress,
 }: {
   month: ISODate;
   today: ISODate;
@@ -64,20 +58,14 @@ export function MasterView({
   posts: Post[];
   rows: Row[];
   total: MonthNumbers;
-  /** Missed days this month, for active brands with preferred days. */
-  missed: Missed[];
   /** Planned and in-progress entries from today to 6 days ahead. */
   upcoming: Post[];
-  /** Every planned or in-progress entry, any date, for the shoot list. */
-  inProgress: Post[];
 }) {
   const festivalSheet = useSheet<string | "all">();
   const festivalListFor = festivalSheet.value;
   const setFestivalListFor = festivalSheet.show;
   const editSheet = useSheet<Post>();
   const editing = editSheet.value;
-  const rescheduleSheet = useSheet<{ brandId: string; date: ISODate }>();
-  const rescheduling = rescheduleSheet.value;
   const brandById = new Map(brands.map((b) => [b.id, b]));
   const festivalById = new Map(festivals.map((f) => [f.id, f]));
   const active = brands.filter((b) => b.is_active);
@@ -216,12 +204,17 @@ export function MasterView({
       </div>
 
       <ShareSummary
-        text={whatsappSummary(
-          month,
-          today,
-          rows.map((r) => ({ name: brandById.get(r.brandId)!.name, numbers: r.numbers })),
-          total,
-        )}
+        brands={active}
+        textFor={(brandId) =>
+          whatsappSummary(
+            month,
+            today,
+            rows
+              .filter((r) => !brandId || r.brandId === brandId)
+              .map((r) => ({ name: brandById.get(r.brandId)!.name, numbers: r.numbers })),
+            total,
+          )
+        }
       />
 
       <Link
@@ -231,15 +224,6 @@ export function MasterView({
         <FileText /> Monthly report (print or PDF)
       </Link>
 
-      {active.some(hasPreferredDays) && (
-        <MissedList
-          missed={missed}
-          brandById={brandById}
-          calendarHref={calendarHref}
-          onReschedule={(brandId, date) => rescheduleSheet.show({ brandId, date })}
-        />
-      )}
-
       <UpcomingList
         today={today}
         upcoming={upcoming}
@@ -247,8 +231,6 @@ export function MasterView({
         festivalById={festivalById}
         onEdit={editSheet.show}
       />
-
-      <ShootList posts={inProgress} brandById={brandById} today={today} onEdit={editSheet.show} />
 
       <TopPosts month={month} brands={active} posts={posts} onEdit={editSheet.show} />
 
@@ -292,20 +274,6 @@ export function MasterView({
         )}
       </BottomSheet>
 
-      <BottomSheet open={rescheduleSheet.open} onOpenChange={rescheduleSheet.onOpenChange} title="Reschedule">
-        {rescheduling && (
-          <RescheduleForm
-            key={rescheduleSheet.key}
-            brand={brandById.get(rescheduling.brandId)!}
-            missedDate={rescheduling.date}
-            brands={brands}
-            festivals={festivals}
-            today={today}
-            onSaved={rescheduleSheet.close}
-          />
-        )}
-      </BottomSheet>
-
       <BottomSheet open={editSheet.open} onOpenChange={editSheet.onOpenChange} title="Edit entry">
         {editing && (
           <PostForm
@@ -325,8 +293,11 @@ export function MasterView({
   );
 }
 
-/** Copy the month's summary, or open WhatsApp with it typed in. */
-function ShareSummary({ text }: { text: string }) {
+/** Copy the month's summary (all brands, or one), or open WhatsApp with it typed in. */
+function ShareSummary({ brands, textFor }: { brands: Brand[]; textFor: (brandId: string) => string }) {
+  const [brandId, setBrandId] = useState("");
+  const text = textFor(brandId);
+
   async function copy() {
     try {
       await navigator.clipboard.writeText(text);
@@ -338,6 +309,19 @@ function ShareSummary({ text }: { text: string }) {
 
   return (
     <div className="grid grid-cols-2 gap-2">
+      <NativeSelect
+        aria-label="Summary for"
+        className="col-span-2"
+        value={brandId}
+        onChange={(e) => setBrandId(e.target.value)}
+      >
+        <option value="">Summary for all brands</option>
+        {brands.map((b) => (
+          <option key={b.id} value={b.id}>
+            Summary for {b.name}
+          </option>
+        ))}
+      </NativeSelect>
       <Button variant="outline" onClick={copy}>
         <Copy /> Copy summary
       </Button>
@@ -414,122 +398,6 @@ function TopPosts({
         </div>
       )}
     </section>
-  );
-}
-
-const MISSED_PREVIEW = 5;
-
-function MissedList({
-  missed,
-  brandById,
-  calendarHref,
-  onReschedule,
-}: {
-  missed: Missed[];
-  brandById: Map<string, Brand>;
-  calendarHref: (brandId: string) => string;
-  onReschedule: (brandId: string, date: ISODate) => void;
-}) {
-  const [expanded, setExpanded] = useState<string[]>([]);
-
-  return (
-    <section className="space-y-2">
-      <h2 className="text-lg font-semibold">Missed this month</h2>
-      {missed.length === 0 ? (
-        <p className="rounded-xl border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-          No missed days. 🎉
-        </p>
-      ) : (
-        missed.map(({ brandId, days }) => {
-          const b = brandById.get(brandId)!;
-          const open = expanded.includes(brandId);
-          // Newest first: the most recent misses are the easiest to catch up on.
-          const sorted = [...days].reverse();
-          const shown = open ? sorted : sorted.slice(0, MISSED_PREVIEW);
-          return (
-            <div key={brandId} className="overflow-hidden rounded-2xl border bg-card">
-              <div className="flex items-center justify-between gap-2 border-b bg-muted/40 px-3 py-2">
-                <Link href={calendarHref(brandId)} className="font-semibold hover:underline" style={{ color: b.color }}>
-                  {b.name} →
-                </Link>
-                <span className="text-sm text-red-600 tabular-nums dark:text-red-400">{days.length} missed</span>
-              </div>
-              <ul className="divide-y">
-                {shown.map((d) => (
-                  <li key={d} className="flex items-center justify-between gap-2 py-1 pr-1 pl-3 text-sm">
-                    <span className="inline-flex items-center gap-2 tabular-nums">
-                      <span className="size-2 rounded-full bg-red-500" />
-                      {formatDisplayDate(d)}
-                    </span>
-                    <Button variant="outline" onClick={() => onReschedule(brandId, d)}>
-                      <CalendarClock /> Reschedule
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-              {days.length > MISSED_PREVIEW && (
-                <Button
-                  variant="ghost"
-                  className="w-full rounded-none border-t"
-                  onClick={() =>
-                    setExpanded((e) => (open ? e.filter((id) => id !== brandId) : [...e, brandId]))
-                  }
-                >
-                  {open ? "Show fewer" : `Show all ${days.length}`}
-                </Button>
-              )}
-            </div>
-          );
-        })
-      )}
-    </section>
-  );
-}
-
-/** A new `planned` entry on a new date that stands in for a missed day. */
-function RescheduleForm({
-  brand,
-  missedDate,
-  brands,
-  festivals,
-  today,
-  onSaved,
-}: {
-  brand: Brand;
-  missedDate: ISODate;
-  brands: Brand[];
-  festivals: Festival[];
-  today: ISODate;
-  onSaved: () => void;
-}) {
-  const [date, setDate] = useState<ISODate>(today);
-
-  return (
-    <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">
-        Plan a <span className="font-medium text-foreground">{brand.name}</span> post to make up for{" "}
-        <span className="font-medium text-foreground">{formatDisplayDate(missedDate)}</span>. That day will then show
-        as rescheduled instead of missed.
-      </p>
-      <div className="space-y-1.5">
-        <Label htmlFor="reschedule-date">New date</Label>
-        <Input
-          id="reschedule-date"
-          type="date"
-          value={date}
-          min={addDaysISO(missedDate, 1)}
-          onChange={(e) => setDate(e.target.value)}
-        />
-      </div>
-      <PostForm
-        post={null}
-        defaults={{ brand_id: brand.id, post_date: date || null, status: "planned", rescheduled_from: missedDate }}
-        brands={brands}
-        festivals={festivals}
-        today={today}
-        onSaved={onSaved}
-      />
-    </div>
   );
 }
 
@@ -751,6 +619,8 @@ function FestivalGrid({
   );
 }
 
+const LOG_PAGE_SIZE = 10;
+
 function CombinedLog({
   brands,
   festivals,
@@ -790,8 +660,21 @@ function CombinedLog({
     );
   const usedFestivals = festivals.filter((f) => posts.some((p) => p.festival_id === f.id));
 
+  // 10 per page. Changing a filter or the search goes back to page 1.
+  const filterKey = [brand, status, type, festival, festivalOnly, q].join("|");
+  const [paging, setPaging] = useState({ key: filterKey, page: 0 });
+  const pages = Math.max(1, Math.ceil(filtered.length / LOG_PAGE_SIZE));
+  const page = paging.key === filterKey ? Math.min(paging.page, pages - 1) : 0;
+  const shown = filtered.slice(page * LOG_PAGE_SIZE, (page + 1) * LOG_PAGE_SIZE);
+  const topRef = useRef<HTMLElement>(null);
+
+  function goTo(next: number) {
+    setPaging({ key: filterKey, page: next });
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
-    <section className="space-y-3">
+    <section ref={topRef} className="scroll-mt-4 space-y-3">
       <div className="flex items-baseline justify-between">
         <h2 className="text-lg font-semibold">All entries</h2>
         <span className="text-sm text-muted-foreground tabular-nums">
@@ -852,18 +735,33 @@ function CombinedLog({
           No entries match.
         </p>
       ) : (
-        <div className="divide-y overflow-hidden rounded-xl border bg-card">
-          {filtered.map((p) => (
-            <PostRow
-              key={p.id}
-              post={p}
-              brand={brandById.get(p.brand_id)}
-              festival={p.festival_id ? festivalById.get(p.festival_id) : undefined}
-              showDate
-              onClick={() => onEdit(p)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="divide-y overflow-hidden rounded-xl border bg-card">
+            {shown.map((p) => (
+              <PostRow
+                key={p.id}
+                post={p}
+                brand={brandById.get(p.brand_id)}
+                festival={p.festival_id ? festivalById.get(p.festival_id) : undefined}
+                showDate
+                onClick={() => onEdit(p)}
+              />
+            ))}
+          </div>
+          {pages > 1 && (
+            <nav aria-label="Pages" className="flex items-center justify-between gap-2">
+              <Button variant="outline" disabled={page === 0} onClick={() => goTo(page - 1)}>
+                <ChevronLeft /> Previous
+              </Button>
+              <span className="text-sm text-muted-foreground tabular-nums">
+                Page {page + 1} of {pages}
+              </span>
+              <Button variant="outline" disabled={page >= pages - 1} onClick={() => goTo(page + 1)}>
+                Next <ChevronRight />
+              </Button>
+            </nav>
+          )}
+        </>
       )}
     </section>
   );

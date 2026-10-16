@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
-import { advancePost } from "@/app/actions/posts";
+import { advancePost, revertPost } from "@/app/actions/posts";
 import { BrandDot } from "@/components/badges";
 import { useRunAction } from "@/components/use-run-action";
 import { Button } from "@/components/ui/button";
@@ -27,9 +27,12 @@ export function ShootList({
   brandById,
   today,
   onEdit,
+  showBrand = true,
 }: {
   posts: Post[];
   brandById: Map<string, Brand>;
+  /** Off on a brand's own calendar, where every item is that brand. */
+  showBrand?: boolean;
   today: ISODate;
   onEdit: (post: Post) => void;
 }) {
@@ -80,7 +83,7 @@ export function ShootList({
                 <button type="button" className="min-h-11 min-w-0 flex-1 text-left" onClick={() => onEdit(p)}>
                   <span className="block truncate text-sm font-medium">{p.title}</span>
                   <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-                    {b && (
+                    {b && showBrand && (
                       <span className="inline-flex items-center gap-1">
                         <BrandDot color={b.color} className="size-2" />
                         {b.name}
@@ -102,6 +105,7 @@ export function ShootList({
                   onClick={() =>
                     run(() => advancePost(p.id, current.next), {
                       success: current.next === "posted" ? "Marked posted today" : `Moved to ${current.action}`,
+                      undo: () => revertPost(p),
                     })
                   }
                 >

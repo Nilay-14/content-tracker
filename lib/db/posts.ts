@@ -66,14 +66,16 @@ export async function listIdeas(): Promise<Post[]> {
 }
 
 /** Everything being worked on (planned, shot, edited, scheduled), oldest date first. */
-export async function listInProgress(): Promise<Post[]> {
-  const { data, error } = await db()
+export async function listInProgress(opts: { brandId?: string } = {}): Promise<Post[]> {
+  let query = db()
     .from("posts")
     .select("*")
     .in("status", ["planned", "shot", "edited", "scheduled"])
     .order("post_date", { ascending: true, nullsFirst: false })
     .order("created_at")
     .limit(500);
+  if (opts.brandId) query = query.eq("brand_id", opts.brandId);
+  const { data, error } = await query;
   if (error) fail("Loading the shoot list", error);
   return data;
 }
@@ -138,17 +140,12 @@ export async function listPeople(): Promise<string[]> {
   return [...counts.values()].sort((a, b) => b.n - a.n).map((e) => e.name);
 }
 
-/** Entries tagged with any of these festivals and dated in the window. */
-export async function listFestivalPosts(
-  festivalIds: string[],
-  from: ISODate,
-  to: ISODate,
-): Promise<Post[]> {
-  if (festivalIds.length === 0) return [];
+/** Entries tagged with a festival and dated in the window. */
+export async function listFestivalPosts(from: ISODate, to: ISODate): Promise<Post[]> {
   const { data, error } = await db()
     .from("posts")
     .select("*")
-    .in("festival_id", festivalIds)
+    .not("festival_id", "is", null)
     .gte("post_date", from)
     .lte("post_date", to);
   if (error) fail("Loading festival entries", error);

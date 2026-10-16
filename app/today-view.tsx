@@ -14,7 +14,7 @@ import {
   Plus,
   Sparkles,
 } from "lucide-react";
-import { addIdea, scheduleIdea } from "@/app/actions/posts";
+import { addIdea, deletePost, revertPost, scheduleIdea } from "@/app/actions/posts";
 import { BottomSheet } from "@/components/bottom-sheet";
 import { PaceBadge, ProgressBar } from "@/components/badges";
 import { HeaderBand, ON_BAND } from "@/components/page-header";
@@ -418,7 +418,11 @@ function IdeasCard({
 
   function add() {
     if (!draft.trim()) return;
-    run(() => addIdea(brand.id, draft), { success: "Idea saved", onSuccess: () => setDraft("") });
+    run(() => addIdea(brand.id, draft), {
+      success: "Idea saved",
+      undo: (idea) => deletePost(idea.id),
+      onSuccess: () => setDraft(""),
+    });
   }
 
   return (
@@ -500,6 +504,7 @@ function ScheduleForm({ idea, initialDate, onDone }: { idea: Post; initialDate: 
         e.preventDefault();
         run(() => scheduleIdea(idea.id, day), {
           success: day ? `Planned for ${formatShortDate(day)}` : undefined,
+          undo: () => revertPost(idea),
           onSuccess: onDone,
         });
       }}

@@ -1,7 +1,7 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { refresh } from "next/cache";
+import { changed } from "@/lib/changed";
 import * as brands from "@/lib/db/brands";
 import { monthStartISO } from "@/lib/ist";
 import type { ActionResult } from "@/lib/types";
@@ -42,19 +42,19 @@ export async function saveBrand(id: string | null, form: BrandForm): Promise<Act
     if (id) await brands.updateBrand(uuid(id, "Brand"), fields);
     else await brands.createBrand(fields);
   });
-  refresh();
+  changed();
   return result;
 }
 
 export async function archiveBrand(id: string, archived: boolean): Promise<ActionResult> {
   const result = await attempt(() => brands.setBrandActive(uuid(id, "Brand"), !archived));
-  refresh();
+  changed();
   return result;
 }
 
 export async function deleteBrand(id: string): Promise<ActionResult> {
   const result = await attempt(() => brands.deleteBrand(uuid(id, "Brand")));
-  refresh();
+  changed();
   return result;
 }
 
@@ -62,13 +62,13 @@ export async function moveBrand(id: string, direction: -1 | 1): Promise<ActionRe
   const result = await attempt(() =>
     brands.moveBrand(uuid(id, "Brand"), direction === -1 ? -1 : 1),
   );
-  refresh();
+  changed();
   return result;
 }
 
 export async function addStarterBrands(): Promise<ActionResult> {
   const result = await attempt(() => brands.insertStarterBrands());
-  refresh();
+  changed();
   return result;
 }
 
@@ -86,13 +86,13 @@ export async function setMonthTarget(
       wholeNumber(target, "Target", 1000),
     );
   });
-  refresh();
+  changed();
   return result;
 }
 
 export async function removeMonthTarget(id: string): Promise<ActionResult> {
   const result = await attempt(() => brands.deleteMonthTarget(uuid(id, "Target")));
-  refresh();
+  changed();
   return result;
 }
 
@@ -103,13 +103,13 @@ export async function createShareLink(brandId: string): Promise<ActionResult<str
     await brands.setShareToken(uuid(brandId, "Brand"), token);
     return token;
   });
-  refresh();
+  changed();
   return result;
 }
 
 /** Turns a brand's share link off. */
 export async function removeShareLink(brandId: string): Promise<ActionResult> {
   const result = await attempt(() => brands.setShareToken(uuid(brandId, "Brand"), null));
-  refresh();
+  changed();
   return result;
 }

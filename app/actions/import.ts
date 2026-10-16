@@ -1,6 +1,6 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { changed } from "@/lib/changed";
 import * as posts from "@/lib/db/posts";
 import { IMPORT_SKIP_REASON, MAX_IMPORT_ROWS, type ImportRow } from "@/lib/import";
 import { normalizeTitle } from "@/lib/suggest";
@@ -58,6 +58,6 @@ export async function importPosts(brandId: string, rows: ImportRow[]): Promise<A
     if (fresh.length > 0) await posts.createPosts(fresh.map((f) => f.input));
     return { imported: fresh.length, duplicates };
   });
-  refresh();
+  changed();
   return result;
 }

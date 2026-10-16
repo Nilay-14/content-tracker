@@ -38,7 +38,8 @@ export default function TodayPage({ searchParams }: PageProps<"/">) {
 async function TodayContent({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
   await connection();
   if (!isDbConfigured()) return <ConnectNotice />;
-  await requireUnlocked();
+  // The PIN check runs alongside the data queries instead of before them.
+  const unlocked = requireUnlocked();
 
   const params = await searchParams;
   const today = todayIST();
@@ -46,7 +47,8 @@ async function TodayContent({ searchParams }: Pick<PageProps<"/">, "searchParams
   const brandParam = typeof params.brand === "string" ? params.brand : null;
   const month = monthStartISO(date);
 
-  const [brands, festivals, postsOnDate, monthPosts, targets, todayPosts, ideas] = await Promise.all([
+  const [, brands, festivals, postsOnDate, monthPosts, targets, todayPosts, ideas, taggedPosts] = await Promise.all([
+    unlocked,
     listBrands({ activeOnly: true }),
     listFestivals({ activeOnly: true }),
     listPostsOnDate(date),
@@ -54,18 +56,15 @@ async function TodayContent({ searchParams }: Pick<PageProps<"/">, "searchParams
     listMonthTargets({ month }),
     date === today ? null : listPostsOnDate(today),
     listIdeas(),
+    // Festival posts usually go up in the weeks before; ignore last year's tags.
+    listFestivalPosts(addDaysISO(date, -60), addDaysISO(date, BANNER_DAYS + 7)),
   ]);
 
   // Festivals whose date falls in the next 10 days from the chosen date.
   const upcoming = festivals
     .filter((f) => f.festival_date && f.festival_date >= date && f.festival_date <= addDaysISO(date, BANNER_DAYS))
     .sort((a, b) => a.festival_date!.localeCompare(b.festival_date!));
-  // Festival posts usually go up in the weeks before; ignore last year's tags.
-  const festivalPosts = await listFestivalPosts(
-    upcoming.map((f) => f.id),
-    addDaysISO(date, -60),
-    addDaysISO(date, BANNER_DAYS + 7),
-  );
+  const festivalPosts = taggedPosts.filter((p) => upcoming.some((f) => f.id === p.festival_id));
   const banner: BannerItem[] = upcoming.map((f) => ({
     festival: f,
     brands: brands.map((b) => {
